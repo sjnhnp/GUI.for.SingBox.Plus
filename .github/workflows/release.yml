@@ -1,4 +1,4 @@
-name: Build GUI.for.SingBox
+name: Build GFS Plus
 
 on:
   push:
@@ -72,7 +72,7 @@ jobs:
     needs: Build-Frontend
     runs-on: windows-latest
     env:
-      APP_NAME: GUI.for.SingBox
+      APP_NAME: GFS Plus
     steps:
       - uses: actions/checkout@v4
         with:
@@ -139,7 +139,7 @@ jobs:
     needs: Build-Frontend
     runs-on: macos-latest
     env:
-      APP_NAME: GUI.for.SingBox
+      APP_NAME: GFS Plus
     steps:
       - uses: actions/checkout@v4
         with:
@@ -202,7 +202,7 @@ jobs:
     needs: Build-Frontend
     runs-on: ubuntu-latest
     env:
-      APP_NAME: GUI.for.SingBox
+      APP_NAME: GFS Plus
     steps:
       - uses: actions/checkout@v4
         with:
