@@ -23,7 +23,7 @@ import (
 var Config = &AppConfig{}
 
 // Version can be set at build time via -ldflags
-var Version = "v1.19.0"
+var Version = "v0.0.0-dev"
 
 var Env = &EnvResult{
 	IsStartup:    true,
