@@ -184,10 +184,10 @@ jobs:
             LDFLAGS="-X 'guiforcores/bridge.Version=$VERSION'"
 
             echo "==> Building macOS $arch with version $VERSION..."
-            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags "$LDFLAGS" -o $APP_NAME.exe
+            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags "$LDFLAGS" -o "$APP_NAME.exe"
 
             cd build/bin
-            zip -q -r $APP_NAME-darwin-$arch.zip $APP_NAME.app
+            zip -q -r "$APP_NAME-darwin-$arch.zip" "$APP_NAME.app"
             cd ../..
           }
 
@@ -247,11 +247,11 @@ jobs:
             LDFLAGS="-X 'guiforcores/bridge.Version=$VERSION'"
 
             echo "==> Building Linux $arch with version $VERSION..."
-            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags "$LDFLAGS" -o $APP_NAME.exe
+            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags "$LDFLAGS" -o "$APP_NAME.exe"
 
             cd build/bin
-            mv $APP_NAME.exe $APP_NAME
-            zip $APP_NAME-linux-$arch.zip $APP_NAME
+            mv "$APP_NAME.exe" "$APP_NAME"
+            zip "$APP_NAME-linux-$arch.zip" "$APP_NAME"
             cd ../..
           }
 
