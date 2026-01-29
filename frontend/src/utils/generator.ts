@@ -79,13 +79,14 @@ const generateInbounds = (inbounds: IInbound[]) => {
       }
     }
     if (inbound.type === Inbound.Tun) {
+      const tun = inbound.tun || inbound
       return {
         type: inbound.type,
         tag: inbound.tag,
-        ...inbound.tun!,
-        route_address: inbound.tun!.route_address?.length ? inbound.tun!.route_address : undefined,
-        route_exclude_address: inbound.tun!.route_exclude_address?.length
-          ? inbound.tun!.route_exclude_address
+        ...tun,
+        route_address: tun.route_address?.length ? tun.route_address : undefined,
+        route_exclude_address: tun.route_exclude_address?.length
+          ? tun.route_exclude_address
           : undefined,
       }
     }
@@ -204,7 +205,7 @@ const generateRoute = (route: IRoute, inbounds: IInbound[], outbounds: IOutbound
       } else if (rule.action === RuleAction.Reject) {
         extra.method = rule.outbound
       } else if (rule.action === RuleAction.Sniff) {
-        if (rule.sniffer.length) {
+        if (rule.sniffer?.length) {
           extra.sniffer = rule.sniffer
         }
       } else if (rule.action === RuleAction.Resolve) {
