@@ -17,7 +17,6 @@ export const getAcceleratedUrl = (url: string) => {
 
     const proxy = githubProxy.endsWith('/') ? githubProxy : githubProxy + '/'
 
-    // For raw.githubusercontent.com, some proxies might need special handling, 
-    // but usually prepending works.
+    // Ensure proxy ends with '/' to support both 'https://a.com' and 'https://a.com/' input formats
     return proxy + url
 }

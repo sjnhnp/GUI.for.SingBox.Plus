@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { computed } from 'vue'
 import { MakeDir, OpenDir } from '@/bridge'
 import { RollingReleaseDirectory } from '@/constant/app'
 import { useAppSettingsStore, useEnvStore } from '@/stores'
@@ -19,7 +20,25 @@ const handleOpenRollingReleaseFolder = async () => {
 const GithubProxyOptions = [
   { label: 'None', value: '' },
   { label: 'ghfast.top', value: 'https://ghfast.top/' },
+  { label: 'Custom', value: 'CUSTOM' },
 ]
+
+const githubProxySelect = computed({
+  get: () => {
+    const val = appSettings.app.githubProxy
+    const found = GithubProxyOptions.find((o) => o.value === val)
+    return found ? val : 'CUSTOM'
+  },
+  set: (val) => {
+    if (val === 'CUSTOM') {
+      if (!appSettings.app.githubProxy || GithubProxyOptions.find((o) => o.value === appSettings.app.githubProxy)) {
+        appSettings.app.githubProxy = 'https://'
+      }
+    } else {
+      appSettings.app.githubProxy = val
+    }
+  },
+})
 
 const handleClearApiToken = () => {
   appSettings.app.githubApiToken = ''
@@ -107,12 +126,12 @@ const handleClearUserAgent = () => {
       </div>
       <div class="flex items-center gap-4">
         <Select
-          v-model="appSettings.app.githubProxy"
+          v-model="githubProxySelect"
           :options="GithubProxyOptions"
           class="min-w-256"
         />
         <Input
-          v-if="!GithubProxyOptions.find(o => o.value === appSettings.app.githubProxy)"
+          v-if="githubProxySelect === 'CUSTOM'"
           v-model.lazy="appSettings.app.githubProxy"
           placeholder="Custom URL"
           editable
