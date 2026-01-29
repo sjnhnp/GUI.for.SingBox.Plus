@@ -22,11 +22,14 @@ import {
 import { deepAssign, deepClone, APP_TITLE, buildSmartRegExp, getAcceleratedUrl } from '@/utils'
 
 const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: IInbound[]) => {
-  const getInbound = (id: string) => inbounds.find((v) => v.id === id)?.tag
-  const getRuleset = (id: string) => rule_set.find((v) => v.id === id)?.tag
+  const getInbound = (id: string) => inbounds.find((v) => v.id === id)?.tag || id
+  const getRuleset = (id: string) => rule_set.find((v) => v.id === id)?.tag || id
 
   const extra: Recordable = { action: rule.action, invert: rule.invert ? true : undefined }
-  if (rule.type === RuleType.Inline) {
+  if (!rule.type) {
+    const { action, invert, type, payload, ...rest } = rule as any
+    deepAssign(extra, rest)
+  } else if (rule.type === RuleType.Inline) {
     deepAssign(extra, JSON.parse(rule.payload))
   } else if (rule.type === RuleType.RuleSet) {
     extra[rule.type] = rule.payload.split(',').map((id) => getRuleset(id))
@@ -53,7 +56,7 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
 }
 
 const generateExperimental = (experimental: IExperimental, outbounds: IOutbound[]) => {
-  const getOutbound = (id: string) => outbounds.find((v) => v.id === id)?.tag
+  const getOutbound = (id: string) => outbounds.find((v) => v.id === id)?.tag || id
   return {
     clash_api: {
       ...experimental.clash_api,
@@ -178,9 +181,9 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
 }
 
 const generateRoute = (route: IRoute, inbounds: IInbound[], outbounds: IOutbound[], dns: IDNS) => {
-  const getOutbound = (id: string) => outbounds.find((v) => v.id === id)?.tag
-  const getDnsServer = (id: string) => dns.servers.find((v) => v.id === id)?.tag
-  const isInboundEnabled = (id: string) => inbounds.find((v) => v.id === id)?.enable
+  const getOutbound = (id: string) => outbounds.find((v) => v.id === id)?.tag || id
+  const getDnsServer = (id: string) => dns.servers.find((v) => v.id === id)?.tag || id
+  const isInboundEnabled = (id: string) => inbounds.find((v) => v.id === id)?.enable ?? true
 
   const rulesetsStore = useRulesetsStore()
 
@@ -257,8 +260,8 @@ const generateDns = (
   inbounds: IInbound[],
   outbounds: IOutbound[],
 ) => {
-  const getOutbound = (id: string) => outbounds.find((v) => v.id === id)
-  const getDnsServer = (id: string) => dns.servers.find((v) => v.id === id)?.tag
+  const getOutbound = (id: string) => outbounds.find((v) => v.id === id)?.tag || id
+  const getDnsServer = (id: string) => dns.servers.find((v) => v.id === id)?.tag || id
   const extra: Recordable = {}
   if (dns.strategy !== Strategy.Default) {
     extra.strategy = dns.strategy

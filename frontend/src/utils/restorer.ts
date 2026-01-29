@@ -3,6 +3,18 @@ import { Inbound, Outbound, RuleAction, Strategy, TunStack } from '@/enums/kerne
 
 import { deepAssign, sampleID } from './others'
 
+const detectRuleType = (rule: any) => {
+  if (rule.type) return rule.type
+  const keys = [
+    'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'geosite',
+    'ip_cidr', 'ip_is_private', 'geoip', 'source_ip_cidr', 'source_geoip',
+    'source_port', 'source_port_range', 'port', 'port_range', 'process_name',
+    'process_path', 'package_name', 'wifi_ssid', 'wifi_bssid', 'rule_set',
+    'clash_mode', 'inbound', 'protocol', 'network', 'query_type', 'source_format'
+  ]
+  return keys.find((k) => rule[k] !== undefined)
+}
+
 export const restoreProfile = (config: Recordable) => {
   const profile: IProfile = {
     id: sampleID(),
@@ -133,7 +145,9 @@ export const restoreProfile = (config: Recordable) => {
     } else if (field === 'route') {
       profile.route = {
         rules: (value.rules || []).flatMap((rule: any) => {
-          // Skip rules that might be invalid or unsupported if needed
+          const type = detectRuleType(rule)
+          if (!type) return []
+
           const extra: Recordable = {}
           if (rule.action === RuleAction.Route) {
             extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
@@ -149,9 +163,9 @@ export const restoreProfile = (config: Recordable) => {
 
           return {
             id: sampleID(),
-            type: rule.type,
+            type,
             action: rule.action || RuleAction.Route,
-            payload: rule[rule.type] || '', // This might need refinement based on rule type string/array
+            payload: rule[type] || '',
             ...extra,
             ...rule,
           }
@@ -248,15 +262,19 @@ export const restoreProfile = (config: Recordable) => {
             ...server,
           }
         }),
-        rules: (value.rules || []).map((rule: any) => {
+        rules: (value.rules || []).flatMap((rule: any) => {
+          const type = detectRuleType(rule)
+          if (!type) return []
+
           const extra: Recordable = {}
           if (rule.action === RuleAction.Resolve) {
             extra.server = DnsServersIds[rule.server] || rule.server
           }
           return {
             id: sampleID(),
-            type: rule.type,
+            type,
             action: rule.action || RuleAction.Route,
+            payload: rule[type] || '',
             ...extra,
             ...rule,
           }
