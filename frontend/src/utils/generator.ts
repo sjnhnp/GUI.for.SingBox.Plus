@@ -19,7 +19,7 @@ import {
   useRulesetsStore,
   useSubscribesStore,
 } from '@/stores'
-import { deepAssign, deepClone, APP_TITLE, buildSmartRegExp } from '@/utils'
+import { deepAssign, deepClone, APP_TITLE, buildSmartRegExp, getAcceleratedUrl } from '@/utils'
 
 const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: IInbound[]) => {
   const getInbound = (id: string) => inbounds.find((v) => v.id === id)?.tag
@@ -136,7 +136,7 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
             const sub = subscribesStore.getSubscribeById(subId)
             if (sub) {
               const subStr = await ReadFile(sub.path)
-              const proxies = JSON.parse(subStr)
+              const { proxies = [] } = parse(subStr)
               SubscriptionCache[subId] = proxies
             }
           }
@@ -215,7 +215,7 @@ const generateRoute = (route: IRoute, inbounds: IInbound[], outbounds: IOutbound
         extra.path = _ruleset?.path.replace('data/', '../')
         extra.format = ruleset.format
       } else if (ruleset.type === RulesetType.Remote) {
-        extra.url = ruleset.url
+        extra.url = getAcceleratedUrl(ruleset.url)
         extra.format = ruleset.format
         extra.download_detour = getOutbound(ruleset.download_detour)
         if (ruleset.update_interval) {
