@@ -5,7 +5,7 @@ import { deepAssign, sampleID } from './others'
 
 const detectRuleType = (rule: any) => {
   if (rule.type && !['logical', 'inline'].includes(rule.type)) return rule.type
-  const keys = [
+  const matchers = [
     'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'geosite',
     'ip_cidr', 'ip_is_private', 'geoip', 'source_ip_cidr', 'source_geoip',
     'source_ip_is_private', 'source_port', 'source_port_range', 'port', 'port_range',
@@ -14,9 +14,26 @@ const detectRuleType = (rule: any) => {
     'wifi_ssid', 'wifi_bssid', 'rule_set', 'inbound', 'protocol', 'network',
     'query_type', 'source_format', 'client', 'preferred_by'
   ]
-  const foundKeys = keys.filter((k) => rule[k] !== undefined)
-  if (foundKeys.length > 1) return 'inline'
-  return foundKeys[0]
+  const foundMatchers = matchers.filter((k) => rule[k] !== undefined)
+  if (foundMatchers.length > 1) return 'inline'
+  return foundMatchers[0]
+}
+
+const getInlinePayload = (rule: any) => {
+  const matchers = [
+    'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'geosite',
+    'ip_cidr', 'ip_is_private', 'geoip', 'source_ip_cidr', 'source_geoip',
+    'source_ip_is_private', 'source_port', 'source_port_range', 'port', 'port_range',
+    'process_name', 'process_path', 'process_path_regex', 'package_name', 'user', 'user_id',
+    'clash_mode', 'network_type', 'network_is_expensive', 'network_is_constrained',
+    'wifi_ssid', 'wifi_bssid', 'rule_set', 'inbound', 'protocol', 'network',
+    'query_type', 'source_format', 'client', 'preferred_by'
+  ]
+  const res: any = {}
+  matchers.forEach((k) => {
+    if (rule[k] !== undefined) res[k] = rule[k]
+  })
+  return JSON.stringify(res, null, 2)
 }
 
 export const restoreProfile = (config: Recordable, subId?: string) => {
@@ -179,7 +196,7 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
             id: sampleID(),
             type,
             action: rule.action || RuleAction.Route,
-            payload: Array.isArray(rule[type]) ? rule[type].join(',') : String(rule[type] || ''),
+            payload: type === 'inline' ? getInlinePayload(rule) : (Array.isArray(rule[type]) ? rule[type].join(',') : String(rule[type] || '')),
             enable: true,
           }
         }),
@@ -241,7 +258,7 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
             id: sampleID(),
             type,
             action: rule.action || RuleAction.Route,
-            payload: Array.isArray(rule[type]) ? rule[type].join(',') : String(rule[type] || ''),
+            payload: type === 'inline' ? getInlinePayload(rule) : (Array.isArray(rule[type]) ? rule[type].join(',') : String(rule[type] || '')),
             enable: true,
           }
         }),

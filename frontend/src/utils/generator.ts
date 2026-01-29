@@ -29,7 +29,9 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
   extra.invert = extra.invert ? true : undefined
 
   if (type === RuleType.Inline) {
-    deepAssign(extra, JSON.parse(payload))
+    if (payload) {
+      deepAssign(extra, JSON.parse(payload))
+    }
   } else if (type === RuleType.RuleSet) {
     extra[type] = String(payload)
       .split(',')
