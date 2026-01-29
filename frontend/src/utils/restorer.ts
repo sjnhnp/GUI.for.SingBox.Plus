@@ -4,7 +4,7 @@ import { Inbound, Outbound, RuleAction, Strategy, TunStack } from '@/enums/kerne
 import { deepAssign, sampleID } from './others'
 
 const detectRuleType = (rule: any) => {
-  if (rule.type && rule.type !== 'logical') return rule.type
+  if (rule.type && !['logical', 'inline'].includes(rule.type)) return rule.type
   const keys = [
     'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'geosite',
     'ip_cidr', 'ip_is_private', 'geoip', 'source_ip_cidr', 'source_geoip',
@@ -14,7 +14,9 @@ const detectRuleType = (rule: any) => {
     'wifi_ssid', 'wifi_bssid', 'rule_set', 'inbound', 'protocol', 'network',
     'query_type', 'source_format', 'client', 'preferred_by'
   ]
-  return keys.find((k) => rule[k] !== undefined)
+  const foundKeys = keys.filter((k) => rule[k] !== undefined)
+  if (foundKeys.length > 1) return 'inline'
+  return foundKeys[0]
 }
 
 export const restoreProfile = (config: Recordable, subId?: string) => {
@@ -77,7 +79,11 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
 
   Object.entries(config).forEach(([field, value]) => {
     if (field === 'log') {
-      deepAssign(profile[field], value)
+      const log: any = { ...value }
+      if (log.disabled !== undefined) {
+        log.level = log.disabled ? 'disabled' : log.level
+      }
+      deepAssign(profile[field], log)
     } else if (field === 'experimental') {
       deepAssign(profile[field], value)
     } else if (field === 'inbounds') {
@@ -156,14 +162,13 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
           if (!type) return []
 
           const extra: Recordable = {}
-          if (rule.action === RuleAction.Route) {
+          const action = rule.action || RuleAction.Route
+          if (action === RuleAction.Route) {
             extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
-          } else if (rule.action === RuleAction.RouteOptions) {
-            // extra.outbound = ... (route options usually don't have outbound tag)
-          } else if (rule.action === RuleAction.Resolve) {
+          } else if (action === RuleAction.Resolve) {
             extra.server = DnsServersIds[rule.server] || rule.server
             if (rule.strategy) extra.strategy = rule.strategy
-          } else if (rule.action === RuleAction.Sniff) {
+          } else if (action === RuleAction.Sniff) {
             if (rule.sniffer) extra.sniffer = rule.sniffer
           }
           if (rule.invert) extra.invert = rule.invert
