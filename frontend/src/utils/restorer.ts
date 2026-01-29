@@ -15,7 +15,18 @@ const detectRuleType = (rule: any) => {
   return keys.find((k) => rule[k] !== undefined)
 }
 
-export const restoreProfile = (config: Recordable) => {
+export const restoreProfile = (config: Recordable, subId?: string) => {
+  const isStrategy = (type: string) =>
+    [
+      Outbound.Selector,
+      Outbound.Urltest,
+      'url-test',
+      Outbound.Direct,
+      Outbound.Block,
+      'dns',
+      'static',
+    ].includes(type as any)
+
   const profile: IProfile = {
     id: sampleID(),
     name: sampleID(),
@@ -116,21 +127,26 @@ export const restoreProfile = (config: Recordable) => {
       })
     } else if (field === 'outbounds') {
       profile.outbounds = (value || []).flatMap((outbound: any) => {
-        if (!outbound.type || !outbound.tag) {
-          return []
-        }
+        if (!isStrategy(outbound.type)) return []
+
         const extra: Recordable = { ...outbound }
         extra.id = OutboundsIds[outbound.tag] || sampleID()
         if (outbound.outbounds) {
           extra.outbounds = (outbound.outbounds || []).flatMap((tag: string) => {
-            if (!OutboundsIds[tag]) {
-              return []
+            if (OutboundsIds[tag]) {
+              const target = (value || []).find((v: any) => v.tag === tag)
+              const type =
+                target && !isStrategy(target.type) ? subId || 'Subscription' : 'Built-in'
+              return {
+                id: OutboundsIds[tag],
+                type,
+                tag,
+              }
             }
-            return {
-              id: OutboundsIds[tag],
-              type: 'Built-in',
-              tag,
+            if (['direct', 'block'].includes(tag.toLowerCase())) {
+              return { id: tag.toLowerCase(), type: 'Built-in', tag }
             }
+            return []
           })
         }
         return extra

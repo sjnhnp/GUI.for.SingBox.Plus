@@ -199,7 +199,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       // although restoreProfile might handle it, sing-box structure is expected.
       const profilesStore = useProfilesStore()
       const profile = profilesStore.getProfileById(s.id)
-      const _profile = restoreProfile(config)
+      const _profile = restoreProfile(config, s.id)
 
       _profile.id = s.id
 
