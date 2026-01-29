@@ -51,6 +51,8 @@ interface IRuleSet {
   format: RuleSetFormat
 }
 
+type TunStack = 'system' | 'gvisor' | 'mixed'
+
 type InboundType = 'mixed' | 'socks' | 'http' | 'tun'
 type InboundListen = {
   listen: string
@@ -86,8 +88,18 @@ interface IInbound {
     route_address: string[]
     route_exclude_address: string[]
     endpoint_independent_nat: boolean
-    stack: TunStackEnum
+    stack: TunStack
   }
+  // flattened tun or other fields from native import
+  interface_name?: string
+  address?: string[]
+  mtu?: number
+  auto_route?: boolean
+  strict_route?: boolean
+  route_address?: string[]
+  route_exclude_address?: string[]
+  endpoint_independent_nat?: boolean
+  stack?: TunStack
 }
 
 type OutboundType = 'direct' | 'block' | 'selector' | 'urltest'
@@ -219,6 +231,8 @@ interface IDNS {
   disable_cache: boolean
   disable_expire: boolean
   independent_cache: boolean
+  reverse_mapping?: boolean
+  cache_capacity?: number
   client_subnet: string
   final: string
   strategy: Strategy

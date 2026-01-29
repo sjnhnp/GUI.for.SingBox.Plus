@@ -4,13 +4,15 @@ import { Inbound, Outbound, RuleAction, Strategy, TunStack } from '@/enums/kerne
 import { deepAssign, sampleID } from './others'
 
 const detectRuleType = (rule: any) => {
-  if (rule.type) return rule.type
+  if (rule.type && rule.type !== 'logical') return rule.type
   const keys = [
     'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'geosite',
     'ip_cidr', 'ip_is_private', 'geoip', 'source_ip_cidr', 'source_geoip',
-    'source_port', 'source_port_range', 'port', 'port_range', 'process_name',
-    'process_path', 'package_name', 'wifi_ssid', 'wifi_bssid', 'rule_set',
-    'clash_mode', 'inbound', 'protocol', 'network', 'query_type', 'source_format'
+    'source_ip_is_private', 'source_port', 'source_port_range', 'port', 'port_range',
+    'process_name', 'process_path', 'process_path_regex', 'package_name', 'user', 'user_id',
+    'clash_mode', 'network_type', 'network_is_expensive', 'network_is_constrained',
+    'wifi_ssid', 'wifi_bssid', 'rule_set', 'inbound', 'protocol', 'network',
+    'query_type', 'source_format', 'client', 'preferred_by'
   ]
   return keys.find((k) => rule[k] !== undefined)
 }
@@ -265,12 +267,16 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
         strategy: value.strategy || Strategy.Default,
         client_subnet: value.client_subnet || '',
         servers: (value.servers || []).map((server: any) => {
-          // Restore basic DNS server info
-          return {
+          // Restore 1.12+ DNS server format
+          const res: any = {
             id: DnsServersIds[server.tag] || sampleID(),
             enable: true,
             ...server,
           }
+          if (server.address && !server.server && !server.type) {
+            // Legacy format - address URL
+          }
+          return res
         }),
         rules: (value.rules || []).flatMap((rule: any) => {
           const type = detectRuleType(rule)
@@ -290,6 +296,8 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
             enable: true,
           }
         }),
+        reverse_mapping: !!value.reverse_mapping,
+        cache_capacity: value.cache_capacity,
       }
     }
   })

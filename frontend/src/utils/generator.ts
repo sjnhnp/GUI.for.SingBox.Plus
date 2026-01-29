@@ -25,33 +25,37 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
   const getInbound = (id: string) => inbounds.find((v) => v.id === id)?.tag || id
   const getRuleset = (id: string) => rule_set.find((v) => v.id === id)?.tag || id
 
-  const extra: Recordable = { action: rule.action, invert: rule.invert ? true : undefined }
-  if (!rule.type) {
-    const { action, invert, type, payload, ...rest } = rule as any
-    deepAssign(extra, rest)
-  } else if (rule.type === RuleType.Inline) {
-    deepAssign(extra, JSON.parse(rule.payload))
-  } else if (rule.type === RuleType.RuleSet) {
-    extra[rule.type] = String(rule.payload).split(',').map((id) => getRuleset(id))
-  } else if (rule.type === RuleType.Inbound) {
-    extra[rule.type] = getInbound(rule.payload)
-  } else if ([RuleType.IpIsPrivate, RuleType.IpAcceptAny].includes(rule.type as any)) {
-    extra[rule.type] = rule.payload === 'true'
-  } else if (rule.type === RuleType.ClashMode) {
-    extra[rule.type] = rule.payload
-  } else {
-    extra[rule.type] = String(rule.payload)
+  const { id: _, enable: __, type, payload, ...extra } = rule as any
+  extra.invert = extra.invert ? true : undefined
+
+  if (type === RuleType.Inline) {
+    deepAssign(extra, JSON.parse(payload))
+  } else if (type === RuleType.RuleSet) {
+    extra[type] = String(payload)
+      .split(',')
+      .map((id) => getRuleset(id))
+  } else if (type === RuleType.Inbound) {
+    extra[type] = getInbound(payload)
+  } else if ([RuleType.IpIsPrivate, RuleType.IpAcceptAny].includes(type as any)) {
+    extra[type] = payload === 'true' || payload === true
+  } else if (type === RuleType.ClashMode) {
+    extra[type] = payload
+  } else if (type) {
+    const vals = String(payload)
       .split(',')
       .map((val) => {
-        if ([RuleType.Port, RuleType.SourcePort].includes(rule.type as any)) {
+        if ([RuleType.Port, RuleType.SourcePort].includes(type as any)) {
           return Number(val)
         }
         return val
       })
-    if (extra[rule.type].length === 1) {
-      extra[rule.type] = extra[rule.type][0]
-    }
+    extra[type] = vals.length === 1 ? vals[0] : vals
   }
+
+  // Final cleanup: delete GUI helper fields
+  delete extra.id
+  delete extra.enable
+
   return extra
 }
 
@@ -116,12 +120,12 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
 
   for (const outbound of outbounds) {
     const { id, include, exclude, outbounds: _, ..._outbound } = { ...outbound } as any
-    if (outbound.type === Outbound.Selector) {
-      delete _outbound.url
-      delete _outbound.interval
-      delete _outbound.tolerance
-    }
     if (outbound.type === Outbound.Selector || outbound.type === Outbound.Urltest) {
+      if (outbound.type === Outbound.Selector) {
+        delete _outbound.url
+        delete _outbound.interval
+        delete _outbound.tolerance
+      }
       _outbound.outbounds = []
       const isTagMatching = createTagMatcher(outbound.include, outbound.exclude)
       for (const proxy of outbound.outbounds) {
@@ -166,6 +170,12 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
         builtInProxiesSet.add(Outbound.Direct)
         _outbound.outbounds.push(Outbound.Direct)
       }
+    } else {
+      // Non-strategy outbounds don't have these fields in sing-box schema
+      delete _outbound.interrupt_exist_connections
+      delete _outbound.url
+      delete _outbound.interval
+      delete _outbound.tolerance
     }
     result.push(_outbound)
   }
@@ -344,7 +354,9 @@ const generateDns = (
         }
       }
       if ([RuleAction.RouteOptions, RuleAction.Predefined].includes(rule.action as any)) {
-        deepAssign(extra, JSON.parse(rule.server))
+        if (typeof rule.server === 'string' && rule.server.startsWith('{')) {
+          deepAssign(extra, JSON.parse(rule.server))
+        }
       }
       if (rule.action === RuleAction.Reject) {
         extra.method = rule.server
@@ -354,6 +366,8 @@ const generateDns = (
     disable_cache: dns.disable_cache,
     disable_expire: dns.disable_expire,
     independent_cache: dns.independent_cache,
+    cache_capacity: (dns as any).cache_capacity,
+    reverse_mapping: (dns as any).reverse_mapping,
     final: getDnsServer(dns.final),
     ...extra,
   }
