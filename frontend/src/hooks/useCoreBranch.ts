@@ -28,6 +28,7 @@ import {
   debounce,
   getKernelFileName,
   getKernelAssetFileName,
+  getAcceleratedUrl,
 } from '@/utils'
 
 const StableUrl = 'https://api.github.com/repos/SagerNet/sing-box/releases/latest'

@@ -16,6 +16,13 @@ const handleOpenRollingReleaseFolder = async () => {
   await OpenDir(RollingReleaseDirectory)
 }
 
+const GithubProxyOptions = [
+  { label: 'None', value: '' },
+  { label: 'ghfast.top', value: 'https://ghfast.top/' },
+  { label: 'ghp.ci', value: 'https://ghp.ci/' },
+  { label: 'mirror.ghproxy.com', value: 'https://mirror.ghproxy.com/' },
+]
+
 const handleClearApiToken = () => {
   appSettings.app.githubApiToken = ''
 }
@@ -100,22 +107,20 @@ const handleClearUserAgent = () => {
         {{ $t('settings.githubProxy.name') }}
         <span class="font-normal text-12">({{ $t('settings.githubProxy.tips') }})</span>
       </div>
-      <Input
-        v-model.lazy="appSettings.app.githubProxy"
-        :placeholder="'https://ghfast.top'"
-        editable
-        class="text-14 min-w-256"
-      >
-        <template #suffix>
-          <Button
-            v-tips="'settings.userAgent.reset'"
-            type="text"
-            size="small"
-            icon="reset"
-            @click="appSettings.app.githubProxy = ''"
-          />
-        </template>
-      </Input>
+      <div class="flex items-center gap-4">
+        <Select
+          v-model="appSettings.app.githubProxy"
+          :options="GithubProxyOptions"
+          class="min-w-256"
+        />
+        <Input
+          v-if="!GithubProxyOptions.find(o => o.value === appSettings.app.githubProxy)"
+          v-model.lazy="appSettings.app.githubProxy"
+          placeholder="Custom URL"
+          editable
+          class="text-14 min-w-256"
+        />
+      </div>
     </div>
 
     <div class="px-8 py-12 flex items-center justify-between">
