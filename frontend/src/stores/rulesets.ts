@@ -202,7 +202,7 @@ export const useRulesetsStore = defineStore('rulesets', () => {
     rulesetHubLoading.value = true
     try {
       const { body } = await HttpGet<string>(
-        'https://github.com/GUI-for-Cores/Ruleset-Hub/releases/download/latest/sing-full.json',
+        getAcceleratedUrl('https://github.com/GUI-for-Cores/Ruleset-Hub/releases/download/latest/sing-full.json'),
       )
       rulesetHub.value = JSON.parse(body)
       await WriteFile(RulesetHubFilePath, body)

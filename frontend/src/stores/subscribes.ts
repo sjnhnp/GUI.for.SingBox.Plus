@@ -97,7 +97,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     if (s.type === 'Http') {
       const { headers: h, body: b } = await Requests({
         method: s.requestMethod,
-        url: s.url,
+        url: getAcceleratedUrl(s.url),
         headers: s.header.request,
         autoTransformBody: false,
         options: {

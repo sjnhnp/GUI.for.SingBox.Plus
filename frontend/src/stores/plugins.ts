@@ -305,16 +305,16 @@ export const usePluginsStore = defineStore('plugins', () => {
     pluginHubLoading.value = true
     try {
       const { body: body1 } = await HttpGet<string>(
-        'https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/generic.json',
+        getAcceleratedUrl('https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/generic.json'),
       )
       const { body: body2 } = await HttpGet<string>(
-        'https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/gfs.json',
+        getAcceleratedUrl('https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/gfs.json'),
       )
       // Load custom plugin repository (optional, won't block if failed)
       let customPlugins: any[] = []
       try {
         const { body: body3 } = await HttpGet<string>(
-          'https://raw.githubusercontent.com/sjnhnp/gfc/main/plugins/custom.json',
+          getAcceleratedUrl('https://raw.githubusercontent.com/sjnhnp/gfc/main/plugins/custom.json'),
         )
         customPlugins = JSON.parse(body3)
       } catch (err) {
