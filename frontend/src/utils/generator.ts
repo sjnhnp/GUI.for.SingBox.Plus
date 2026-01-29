@@ -25,23 +25,32 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
   const getInbound = (id: string) => inbounds.find((v) => v.id === id)?.tag || id
   const getRuleset = (id: string) => rule_set.find((v) => v.id === id)?.tag || id
 
-  const { id: _, enable: __, type, payload, ...extra } = rule as any
-  extra.invert = extra.invert ? true : undefined
+  const { type, payload, invert, action } = rule as any
+  const res: any = {}
+
+  if (invert) res.invert = true
+  if (action && action !== RuleAction.Route) {
+    res.action = action
+  }
 
   if (type === RuleType.Inline) {
     if (payload) {
-      deepAssign(extra, JSON.parse(payload))
+      try {
+        deepAssign(res, JSON.parse(payload))
+      } catch (e) {
+        console.error('Failed to parse inline rule payload:', payload)
+      }
     }
   } else if (type === RuleType.RuleSet) {
-    extra[type] = String(payload)
+    res[type] = String(payload)
       .split(',')
       .map((id) => getRuleset(id))
   } else if (type === RuleType.Inbound) {
-    extra[type] = getInbound(payload)
+    res[type] = getInbound(payload)
   } else if ([RuleType.IpIsPrivate, RuleType.IpAcceptAny].includes(type as any)) {
-    extra[type] = payload === 'true' || payload === true
+    res[type] = payload === 'true' || payload === true
   } else if (type === RuleType.ClashMode) {
-    extra[type] = payload
+    res[type] = payload
   } else if (type) {
     const vals = String(payload)
       .split(',')
@@ -51,14 +60,10 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
         }
         return val
       })
-    extra[type] = vals.length === 1 ? vals[0] : vals
+    res[type] = vals.length === 1 ? vals[0] : vals
   }
 
-  // Final cleanup: delete GUI helper fields
-  delete extra.id
-  delete extra.enable
-
-  return extra
+  return res
 }
 
 const generateExperimental = (experimental: IExperimental, outbounds: IOutbound[]) => {
@@ -212,7 +217,13 @@ const generateRoute = (route: IRoute, inbounds: IInbound[], outbounds: IOutbound
       if (rule.action === RuleAction.Route) {
         extra.outbound = getOutbound(rule.outbound)
       } else if (rule.action === RuleAction.RouteOptions) {
-        deepAssign(extra, JSON.parse(rule.outbound))
+        if (rule.outbound) {
+          try {
+            deepAssign(extra, JSON.parse(rule.outbound))
+          } catch (e) {
+            console.error('Failed to parse route options:', rule.outbound)
+          }
+        }
       } else if (rule.action === RuleAction.Reject) {
         extra.method = rule.outbound
       } else if (rule.action === RuleAction.Sniff) {
@@ -357,7 +368,11 @@ const generateDns = (
       }
       if ([RuleAction.RouteOptions, RuleAction.Predefined].includes(rule.action as any)) {
         if (typeof rule.server === 'string' && rule.server.startsWith('{')) {
-          deepAssign(extra, JSON.parse(rule.server))
+          try {
+            deepAssign(extra, JSON.parse(rule.server))
+          } catch (e) {
+            console.error('Failed to parse DNS options:', rule.server)
+          }
         }
       }
       if (rule.action === RuleAction.Reject) {
