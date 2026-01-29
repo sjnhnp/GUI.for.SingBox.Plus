@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (optional, default: v0.0.0-dev)'
+        description: 'Version tag (e.g. v1.17.1). Leave empty to auto-increment patch version.'
         required: false
         default: ''
 
@@ -20,6 +20,8 @@ jobs:
     if: github.repository == 'GUI-for-Cores/GUI.for.SingBox'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: latest
@@ -28,6 +30,36 @@ jobs:
           node-version: "latest"
           cache: "pnpm"
           cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Get Version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            INPUT_VER="${{ github.event.inputs.version }}"
+            if [ ! -z "$INPUT_VER" ]; then
+              echo "VERSION=$INPUT_VER" >> $GITHUB_ENV
+            else
+              # Get the most recently created version tag
+              LATEST_TAG=$(git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+              if [ -z "$LATEST_TAG" ]; then
+                LATEST_TAG="v0.0.0"
+              fi
+              # Remove v prefix
+              VERSION_NUM=$(echo "$LATEST_TAG" | sed 's/^v//')
+              echo "Found latest tag: $LATEST_TAG (version: $VERSION_NUM)"
+              IFS='.' read -r -a PARTS <<< "$VERSION_NUM"
+              MAJOR=${PARTS[0]}
+              MINOR=${PARTS[1]}
+              PATCH=${PARTS[2]}
+              # Increment patch
+              NEW_PATCH=$((PATCH + 1))
+              NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
+              echo "Auto-incremented version to $NEW_TAG"
+              echo "VERSION=$NEW_TAG" >> $GITHUB_ENV
+            fi
+          fi
+
       - run: |
           cd frontend
           pnpm install --frozen-lockfile
@@ -44,6 +76,8 @@ jobs:
       APP_NAME: GUI.for.SingBox
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -60,14 +94,21 @@ jobs:
           if ("${{ github.event_name }}" -eq "push") {
             "VERSION=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_ENV -Append
           } else {
-            $ver = "${{ inputs.version }}"
-            if ($ver) {
-              "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
+            $inputVer = "${{ github.event.inputs.version }}"
+            if ($inputVer) {
+              "VERSION=$inputVer" | Out-File -FilePath $env:GITHUB_ENV -Append
             } else {
-              "VERSION=v0.0.0-dev" | Out-File -FilePath $env:GITHUB_ENV -Append
+              $latestTag = git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | Where-Object { $_ -match '^v?\d+\.\d+\.\d+$' } | Select-Object -First 1
+              if (-not $latestTag) { $latestTag = "v0.0.0" }
+              $versionNum = $latestTag -replace '^v', ''
+              Write-Host "Found latest tag: $latestTag"
+              $parts = $versionNum -split '\.'
+              $newPatch = [int]$parts[2] + 1
+              $newTag = "v$($parts[0]).$($parts[1]).$newPatch"
+              Write-Host "Auto-incremented version to $newTag"
+              "VERSION=$newTag" | Out-File -FilePath $env:GITHUB_ENV -Append
             }
           }
-          Write-Host "Building Version: $env:VERSION"
 
       - name: Build & Pack Windows
         shell: pwsh
@@ -78,7 +119,7 @@ jobs:
             $env:GOARCH=$arch
             $ldflags="-X 'guiforcores/bridge.Version=$env:VERSION'"
 
-            Write-Host "==> Building Windows $arch..."
+            Write-Host "==> Building Windows $arch with version $env:VERSION..."
             ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags $ldflags -o "$env:APP_NAME.exe"
 
             cd build/bin
@@ -102,6 +143,8 @@ jobs:
       APP_NAME: GUI.for.SingBox
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -120,11 +163,17 @@ jobs:
           if [ "${{ github.event_name }}" == "push" ]; then
             echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
           else
-            VER="${{ inputs.version }}"
-            if [ -n "$VER" ]; then
-              echo "VERSION=$VER" >> $GITHUB_ENV
+            INPUT_VER="${{ github.event.inputs.version }}"
+            if [ ! -z "$INPUT_VER" ]; then
+              echo "VERSION=$INPUT_VER" >> $GITHUB_ENV
             else
-              echo "VERSION=v0.0.0-dev" >> $GITHUB_ENV
+              LATEST_TAG=$(git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+              if [ -z "$LATEST_TAG" ]; then LATEST_TAG="v0.0.0"; fi
+              VERSION_NUM=$(echo "$LATEST_TAG" | sed 's/^v//')
+              IFS='.' read -r -a PARTS <<< "$VERSION_NUM"
+              NEW_PATCH=$((PARTS[2] + 1))
+              NEW_TAG="v${PARTS[0]}.${PARTS[1]}.$NEW_PATCH"
+              echo "VERSION=$NEW_TAG" >> $GITHUB_ENV
             fi
           fi
 
@@ -135,7 +184,7 @@ jobs:
             export GOOS=darwin GOARCH=$arch
             LDFLAGS="-X 'guiforcores/bridge.Version=$VERSION'"
 
-            echo "==> Building macOS $arch..."
+            echo "==> Building macOS $arch with version $VERSION..."
             ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags "$LDFLAGS" -o $APP_NAME.exe
 
             cd build/bin
@@ -157,6 +206,8 @@ jobs:
       APP_NAME: GUI.for.SingBox
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -175,11 +226,17 @@ jobs:
           if [ "${{ github.event_name }}" == "push" ]; then
             echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
           else
-            VER="${{ inputs.version }}"
-            if [ -n "$VER" ]; then
-              echo "VERSION=$VER" >> $GITHUB_ENV
+            INPUT_VER="${{ github.event.inputs.version }}"
+            if [ ! -z "$INPUT_VER" ]; then
+              echo "VERSION=$INPUT_VER" >> $GITHUB_ENV
             else
-              echo "VERSION=v0.0.0-dev" >> $GITHUB_ENV
+              LATEST_TAG=$(git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+              if [ -z "$LATEST_TAG" ]; then LATEST_TAG="v0.0.0"; fi
+              VERSION_NUM=$(echo "$LATEST_TAG" | sed 's/^v//')
+              IFS='.' read -r -a PARTS <<< "$VERSION_NUM"
+              NEW_PATCH=$((PARTS[2] + 1))
+              NEW_TAG="v${PARTS[0]}.${PARTS[1]}.$NEW_PATCH"
+              echo "VERSION=$NEW_TAG" >> $GITHUB_ENV
             fi
           fi
 
@@ -190,7 +247,7 @@ jobs:
             export GOOS=linux GOARCH=$arch
             LDFLAGS="-X 'guiforcores/bridge.Version=$VERSION'"
 
-            echo "==> Building Linux $arch..."
+            echo "==> Building Linux $arch with version $VERSION..."
             ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -ldflags "$LDFLAGS" -o $APP_NAME.exe
 
             cd build/bin
@@ -209,18 +266,59 @@ jobs:
   Release:
     needs: [Build-Windows, Build-macOS, Build-Linux]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Determine Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "TAG_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            INPUT_VER="${{ github.event.inputs.version }}"
+            if [ ! -z "$INPUT_VER" ]; then
+               echo "TAG_NAME=$INPUT_VER" >> $GITHUB_ENV
+               if git tag -l "$INPUT_VER" | grep -q "$INPUT_VER"; then
+                 echo "TAG_EXISTS=true" >> $GITHUB_ENV
+               else
+                 echo "TAG_EXISTS=false" >> $GITHUB_ENV
+               fi
+            else
+               LATEST_TAG=$(git for-each-ref --sort=-creatordate --format='%(refname:short)' refs/tags | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+               if [ -z "$LATEST_TAG" ]; then LATEST_TAG="v0.0.0"; fi
+               VERSION_NUM=$(echo "$LATEST_TAG" | sed 's/^v//')
+               IFS='.' read -r -a PARTS <<< "$VERSION_NUM"
+               NEW_PATCH=$((PARTS[2] + 1))
+               NEW_TAG="v${PARTS[0]}.${PARTS[1]}.$NEW_PATCH"
+               echo "TAG_NAME=$NEW_TAG" >> $GITHUB_ENV
+               echo "TAG_EXISTS=false" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Create and Push Tag
+        if: env.TAG_EXISTS == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ env.TAG_NAME }}" -m "Release ${{ env.TAG_NAME }}"
+          git push origin "${{ env.TAG_NAME }}"
+          echo "Created and pushed new tag: ${{ env.TAG_NAME }}"
+
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
+      
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
           files: release-assets/**/*.zip
           draft: false
           prerelease: false
           body: |
+            Release ${{ env.TAG_NAME }}
             Auto-generated release from GitHub Actions.

@@ -94,6 +94,10 @@ defineExpose({ modalSlots })
         ]"
       />
     </div>
+    <div v-if="!isManual" class="form-item">
+      使用订阅内的策略组和分流规则
+      <Switch v-model="sub.useInternal" />
+    </div>
     <div class="form-item">
       {{ t('subscribe.name') }} *
       <div class="min-w-[75%]">

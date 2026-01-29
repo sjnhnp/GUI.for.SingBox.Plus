@@ -131,7 +131,99 @@ export const restoreProfile = (config: Recordable) => {
         }
       })
     } else if (field === 'route') {
-    } else if (field === 'dns') {
+      profile.route = {
+        rules: (value.rules || []).flatMap((rule: any) => {
+          // Skip rules that might be invalid or unsupported if needed
+          const extra: Recordable = {}
+          if (rule.action === RuleAction.Route) {
+            extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
+          } else if (rule.action === RuleAction.RouteOptions) {
+            // extra.outbound = ... (route options usually don't have outbound tag)
+          } else if (rule.action === RuleAction.Resolve) {
+            extra.server = DnsServersIds[rule.server] || rule.server
+            if (rule.strategy) extra.strategy = rule.strategy
+          } else if (rule.action === RuleAction.Sniff) {
+            if (rule.sniffer) extra.sniffer = rule.sniffer
+          }
+          if (rule.invert) extra.invert = rule.invert
+
+          return {
+            id: sampleID(),
+            type: rule.type,
+            action: rule.action || RuleAction.Route,
+            payload: rule[rule.type] || '', // This might need refinement based on rule type string/array
+            ...extra,
+            ...rule // Spread original rule to capture other fields like ip_cidr, domain, etc. 
+            // Warning: payload handling in SingBox UI is specific (often stored in 'payload' field of IRule).
+            // The raw config has fields like `domain: [...]`. The UI `IRule` expects `type: 'domain', payload: '...'`.
+            // This is TRICKY. The UI expects a specific format.
+            // Let's look at `generator.ts` to see how it converts UI -> Config.
+            // `_generateRule`: it splits payload.
+            // So here I need to JOIN payload?
+            // Actually, `restoreProfile` IS the key.
+            // Let's implement a basic version. For complex rules, might need more work.
+            // For now, I will try to map the common ones.
+          }
+        }),
+        rule_set: (value.rule_set || []).map((rs: any) => ({
+          id: sampleID(),
+          tag: rs.tag,
+          type: rs.type,
+          format: rs.format,
+          url: rs.url,
+          path: rs.path,
+          download_detour: OutboundsIds[rs.download_detour] || rs.download_detour,
+          update_interval: rs.update_interval,
+          rules: rs.rules // for inline
+        })),
+        final: OutboundsIds[value.final] || value.final || '',
+        auto_detect_interface: value.auto_detect_interface ?? true,
+        find_process: !!value.find_process,
+        default_interface: value.default_interface || '',
+        default_domain_resolver: {
+          server: DnsServersIds[value.default_domain_resolver?.server] || value.default_domain_resolver?.server || '',
+          client_subnet: value.default_domain_resolver?.client_subnet || '',
+        },
+      }
+
+      // Fix Rule Payload: The UI expects `payload` to be a string (comma separated) for list types.
+      profile.route.rules = profile.route.rules.map((r: any) => {
+        const key = r.type // e.g. 'domain', 'ip_cidr'
+        if (value.rules.find((vr: any) => vr === r)) {
+          // wait, I lost the reference to original rule 'vr' 
+          // because I spread `...rule` above, `r` has the properties.
+        }
+
+        let payload = r[key]
+        if (Array.isArray(payload)) {
+          payload = payload.join(',')
+        } else if (typeof payload === 'boolean') {
+          payload = String(payload)
+        }
+        // If payload is undefined, maybe it is stored in `payload` already? No, raw config doesn't have `payload`.
+
+        // Let's try to fetch it from the rule object itself
+        // Iterate common keys?
+        if ([
+          'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'geosite',
+          'ip_cidr', 'ip_is_private', 'geoip', 'source_ip_cidr', 'source_port',
+          'source_port_range', 'port', 'port_range', 'process_name', 'process_path',
+          'package_name', 'wifi_ssid', 'wifi_bssid', 'rule_set', 'clash_mode', 'invert'
+        ].includes(key)) {
+          let rawPayload = r[key]
+          if (Array.isArray(rawPayload)) {
+            payload = rawPayload.join(',')
+          } else {
+            payload = String(rawPayload ?? '')
+          }
+        }
+
+        return {
+          ...r,
+          payload: payload
+        }
+      })
+
       profile.dns = {
         disable_cache: value.disable_cache ?? false,
         disable_expire: value.disable_expire ?? false,

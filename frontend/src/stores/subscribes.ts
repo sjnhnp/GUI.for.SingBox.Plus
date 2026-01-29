@@ -6,7 +6,7 @@ import { ReadFile, WriteFile, Requests } from '@/bridge'
 import { DefaultSubscribeScript, SubscribesFilePath } from '@/constant/app'
 import { DefaultExcludeProtocols } from '@/constant/kernel'
 import { PluginTriggerEvent, RequestMethod } from '@/enums/app'
-import { usePluginsStore } from '@/stores'
+import { usePluginsStore, useProfilesStore } from '@/stores'
 import {
   sampleID,
   isValidSubJson,
@@ -18,6 +18,7 @@ import {
   asyncPool,
   eventBus,
   buildSmartRegExp,
+  restoreProfile,
 } from '@/utils'
 
 import type { Subscription } from '@/types/app'
@@ -106,7 +107,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       })
       Object.assign(h, s.header.response)
       if (h['Subscription-Userinfo']) {
-        ;(h['Subscription-Userinfo'] as string).split(/\s*;\s*/).forEach((part) => {
+        ; (h['Subscription-Userinfo'] as string).split(/\s*;\s*/).forEach((part) => {
           const [key, value] = part.split('=') as [string, string]
           userInfo[key] = parseInt(value) || 0
         })
@@ -114,14 +115,21 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       body = b
     }
 
+    let config: any = null
+
     if (isValidSubJson(body)) {
-      proxies = JSON.parse(body).outbounds
+      config = JSON.parse(body)
+      proxies = config.outbounds
     } else if (isValidSubYAML(body)) {
-      proxies = parse(body).proxies
+      config = parse(body)
+      // sing-box config uses 'outbounds', clash uses 'proxies'
+      // If it's a sing-box config in YAML, it might be under outbounds
+      proxies = config.proxies || config.outbounds
     } else if (isValidBase64(body)) {
       proxies = [{ base64: body }]
     } else if (s.type === 'Manual') {
-      proxies = JSON.parse(body)
+      config = JSON.parse(body)
+      proxies = config
     } else {
       throw 'Not a valid subscription data'
     }
@@ -185,6 +193,26 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     })
 
     await WriteFile(s.path, JSON.stringify(_proxies, null, 2))
+
+    if (s.useInternal && config && !config.proxies) {
+      // check !config.proxies to ensure it's likely a sing-box config, not clash
+      // although restoreProfile might handle it, sing-box structure is expected.
+      const profilesStore = useProfilesStore()
+      const profile = profilesStore.getProfileById(s.id)
+      const _profile = restoreProfile(config)
+
+      _profile.id = s.id
+
+      if (profile) {
+        _profile.name = profile.name // Keep user-defined name
+        // Keep other specific user configs if needed, e.g. mixin/script? 
+        // For now, simple overwrite except name is safer for "Sync" behavior.
+        profilesStore.editProfile(s.id, _profile)
+      } else {
+        _profile.name = s.name
+        profilesStore.addProfile(_profile)
+      }
+    }
   }
 
   const updateSubscribe = async (id: string) => {
@@ -245,6 +273,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     return {
       id: id,
       name: name,
+      useInternal: false,
       upload: 0,
       download: 0,
       total: 0,

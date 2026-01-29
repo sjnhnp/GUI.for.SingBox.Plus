@@ -168,6 +168,7 @@ export interface ScheduledTask {
 export interface Subscription {
   id: string
   name: string
+  useInternal?: boolean
   upload: number
   download: number
   total: number
