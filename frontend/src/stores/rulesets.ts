@@ -13,6 +13,7 @@ import {
   ignoredError,
   isValidRulesJson,
   omitArray,
+  getAcceleratedUrl,
 } from '@/utils'
 
 export interface RuleSet {

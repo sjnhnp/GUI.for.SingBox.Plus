@@ -15,6 +15,7 @@ import {
   confirm,
   asyncPool,
   stringifyNoFolding,
+  getAcceleratedUrl,
 } from '@/utils'
 
 import type { Plugin, Subscription, TrayContent, MenuItem } from '@/types/app'

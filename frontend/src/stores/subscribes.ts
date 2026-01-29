@@ -19,6 +19,7 @@ import {
   eventBus,
   buildSmartRegExp,
   restoreProfile,
+  getAcceleratedUrl,
 } from '@/utils'
 
 import type { Subscription } from '@/types/app'
