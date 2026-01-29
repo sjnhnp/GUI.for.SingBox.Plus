@@ -19,8 +19,6 @@ const handleOpenRollingReleaseFolder = async () => {
 const GithubProxyOptions = [
   { label: 'None', value: '' },
   { label: 'ghfast.top', value: 'https://ghfast.top/' },
-  { label: 'ghp.ci', value: 'https://ghp.ci/' },
-  { label: 'mirror.ghproxy.com', value: 'https://mirror.ghproxy.com/' },
 ]
 
 const handleClearApiToken = () => {
