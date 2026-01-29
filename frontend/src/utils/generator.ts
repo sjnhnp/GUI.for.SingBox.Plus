@@ -136,7 +136,15 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
             const sub = subscribesStore.getSubscribeById(subId)
             if (sub) {
               const subStr = await ReadFile(sub.path)
-              const { proxies = [] } = parse(subStr)
+              const parsed = parse(subStr)
+              let proxies = []
+              if (Array.isArray(parsed)) {
+                proxies = parsed
+              } else if (parsed.proxies) {
+                proxies = parsed.proxies
+              } else if (parsed.outbounds) {
+                proxies = parsed.outbounds
+              }
               SubscriptionCache[subId] = proxies
             }
           }
