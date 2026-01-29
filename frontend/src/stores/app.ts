@@ -174,7 +174,15 @@ export const useAppStore = defineStore('app', () => {
       const { os, arch } = envStore.env
       const assetName = `${APP_TITLE}-${os}-${arch}.zip`
 
-      const asset = assets.find((v: any) => v.name === assetName)
+      let asset = assets.find((v: any) => v.name === assetName)
+      if (!asset) {
+        asset = assets.find(
+          (v: any) =>
+            v.name.toLowerCase().includes(os) &&
+            v.name.toLowerCase().includes(arch) &&
+            v.name.endsWith('.zip'),
+        )
+      }
       if (!asset) throw 'Asset Not Found:' + assetName
 
       remoteVersion.value = tag_name
