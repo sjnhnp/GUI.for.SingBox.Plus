@@ -102,7 +102,11 @@ export const useCoreBranch = (isAlpha = false) => {
       await MakeDir(CoreWorkingDirectory)
 
       await Download(
-        asset.browser_download_url,
+        appSettings.app.githubProxy
+          ? (appSettings.app.githubProxy.endsWith('/')
+            ? appSettings.app.githubProxy
+            : appSettings.app.githubProxy + '/') + asset.browser_download_url
+          : asset.browser_download_url,
         downloadCacheFile,
         undefined,
         (progress, total) => {

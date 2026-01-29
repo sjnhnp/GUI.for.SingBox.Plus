@@ -174,7 +174,7 @@ export const usePluginsStore = defineStore('plugins', () => {
       plugins.value.splice(idx, 0, plugin)
       throw error
     }
-    plugin.path.startsWith('data') && (await RemoveFile(plugin.path).catch((_) => {}))
+    plugin.path.startsWith('data') && (await RemoveFile(plugin.path).catch((_) => { }))
     // Remove configuration
     if (appSettingsStore.app.pluginSettings[plugin.id]) {
       if (await confirm('Tips', 'plugins.removeConfiguration').catch(() => 0)) {
@@ -310,7 +310,17 @@ export const usePluginsStore = defineStore('plugins', () => {
       const { body: body2 } = await HttpGet<string>(
         'https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/gfs.json',
       )
-      pluginHub.value = [...JSON.parse(body1), ...JSON.parse(body2)]
+      // Load custom plugin repository (optional, won't block if failed)
+      let customPlugins: any[] = []
+      try {
+        const { body: body3 } = await HttpGet<string>(
+          'https://raw.githubusercontent.com/sjnhnp/gfc/main/plugins/custom.json',
+        )
+        customPlugins = JSON.parse(body3)
+      } catch (err) {
+        console.warn('Failed to load custom plugin repository:', err)
+      }
+      pluginHub.value = [...JSON.parse(body1), ...JSON.parse(body2), ...customPlugins]
       await WriteFile(PluginHubFilePath, JSON.stringify(pluginHub.value))
     } finally {
       pluginHubLoading.value = false
