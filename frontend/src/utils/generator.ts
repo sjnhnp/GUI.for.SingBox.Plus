@@ -115,15 +115,7 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
   const subscribesStore = useSubscribesStore()
 
   for (const outbound of outbounds) {
-    const _outbound: Recordable = {
-      type: outbound.type,
-      tag: outbound.tag,
-    }
-    if (outbound.type === Outbound.Urltest) {
-      _outbound.url = outbound.url
-      _outbound.interval = outbound.interval
-      _outbound.tolerance = outbound.tolerance
-    }
+    const { id, include, exclude, outbounds: _, ..._outbound } = { ...outbound } as any
     if (outbound.type === Outbound.Selector || outbound.type === Outbound.Urltest) {
       _outbound.interrupt_exist_connections = outbound.interrupt_exist_connections
       _outbound.outbounds = []

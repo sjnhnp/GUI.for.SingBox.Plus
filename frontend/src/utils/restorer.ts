@@ -115,19 +115,14 @@ export const restoreProfile = (config: Recordable) => {
         }
       })
     } else if (field === 'outbounds') {
-      profile.outbounds = value.flatMap((outbound: any) => {
-        if (
-          ![Outbound.Selector, Outbound.Direct, Outbound.Block, Outbound.Urltest].includes(
-            outbound.type,
-          )
-        ) {
+      profile.outbounds = (value || []).flatMap((outbound: any) => {
+        if (!outbound.type || !outbound.tag) {
           return []
         }
-        const extra: Recordable = Defaults.DefaultOutbound()
-        extra.id = OutboundsIds[outbound.tag]
-        extra.tag = outbound.tag
+        const extra: Recordable = { ...outbound }
+        extra.id = OutboundsIds[outbound.tag] || sampleID()
         if (outbound.outbounds) {
-          extra.outbounds = outbound.outbounds.flatMap((tag: string) => {
+          extra.outbounds = (outbound.outbounds || []).flatMap((tag: string) => {
             if (!OutboundsIds[tag]) {
               return []
             }
@@ -138,9 +133,7 @@ export const restoreProfile = (config: Recordable) => {
             }
           })
         }
-        return {
-          ...extra,
-        }
+        return extra
       })
     } else if (field === 'route') {
       profile.route = {
