@@ -32,7 +32,7 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
   } else if (rule.type === RuleType.Inline) {
     deepAssign(extra, JSON.parse(rule.payload))
   } else if (rule.type === RuleType.RuleSet) {
-    extra[rule.type] = rule.payload.split(',').map((id) => getRuleset(id))
+    extra[rule.type] = String(rule.payload).split(',').map((id) => getRuleset(id))
   } else if (rule.type === RuleType.Inbound) {
     extra[rule.type] = getInbound(rule.payload)
   } else if ([RuleType.IpIsPrivate, RuleType.IpAcceptAny].includes(rule.type as any)) {
@@ -122,7 +122,6 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
       delete _outbound.tolerance
     }
     if (outbound.type === Outbound.Selector || outbound.type === Outbound.Urltest) {
-      _outbound.interrupt_exist_connections = outbound.interrupt_exist_connections
       _outbound.outbounds = []
       const isTagMatching = createTagMatcher(outbound.include, outbound.exclude)
       for (const proxy of outbound.outbounds) {
