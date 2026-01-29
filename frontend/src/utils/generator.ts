@@ -116,6 +116,11 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
 
   for (const outbound of outbounds) {
     const { id, include, exclude, outbounds: _, ..._outbound } = { ...outbound } as any
+    if (outbound.type === Outbound.Selector) {
+      delete _outbound.url
+      delete _outbound.interval
+      delete _outbound.tolerance
+    }
     if (outbound.type === Outbound.Selector || outbound.type === Outbound.Urltest) {
       _outbound.interrupt_exist_connections = outbound.interrupt_exist_connections
       _outbound.outbounds = []

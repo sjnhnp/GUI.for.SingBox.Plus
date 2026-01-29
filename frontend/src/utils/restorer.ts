@@ -171,12 +171,13 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
           if (rule.invert) extra.invert = rule.invert
 
           return {
+            ...rule,
+            ...extra,
             id: sampleID(),
             type,
             action: rule.action || RuleAction.Route,
             payload: rule[type] || '',
-            ...extra,
-            ...rule,
+            enable: true,
           }
         }),
         rule_set: (value.rule_set || []).map((rs: any) => ({
@@ -280,12 +281,13 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
             extra.server = DnsServersIds[rule.server] || rule.server
           }
           return {
+            ...rule,
+            ...extra,
             id: sampleID(),
             type,
             action: rule.action || RuleAction.Route,
             payload: rule[type] || '',
-            ...extra,
-            ...rule,
+            enable: true,
           }
         }),
       }
