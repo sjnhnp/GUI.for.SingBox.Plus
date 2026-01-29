@@ -83,7 +83,7 @@ export const useAppStore = defineStore('app', () => {
     target: keyof typeof customActions.value,
     actions: CustomAction | CustomAction[] | CustomActionFn | CustomActionFn[],
   ) => {
-    if (!customActions.value[target]) throw new Error('Target does not exist: ' + target)
+    if (!customActions.value[target]) throw new Error('Target does not exist: ' + String(target))
     const _actions = Array.isArray(actions) ? actions : [actions]
     _actions.forEach((action) => (action.id = sampleID()))
     customActions.value[target].push(..._actions)
@@ -95,7 +95,7 @@ export const useAppStore = defineStore('app', () => {
     return remove
   }
   const removeCustomActions = (target: keyof typeof customActions.value, id: string | string[]) => {
-    if (!customActions.value[target]) throw new Error('Target does not exist: ' + target)
+    if (!customActions.value[target]) throw new Error('Target does not exist: ' + String(target))
     const ids = Array.isArray(id) ? id : [id]
     customActions.value[target] = customActions.value[target].filter((a) => !ids.includes(a.id!))
   }
@@ -185,7 +185,9 @@ export const useAppStore = defineStore('app', () => {
       }
     } catch (error: any) {
       console.error(error)
-      message.error(error.message || error)
+      if (showTips) {
+        message.error(error.message || error)
+      }
     }
     checkForUpdatesLoading.value = false
   }

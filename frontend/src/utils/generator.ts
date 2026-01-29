@@ -154,11 +154,15 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
           }
         }
       }
+      if (_outbound.outbounds.length === 0) {
+        builtInProxiesSet.add(Outbound.Direct)
+        _outbound.outbounds.push(Outbound.Direct)
+      }
     }
     result.push(_outbound)
   }
 
-  result.push(...proxiesSet)
+  result.push(...Array.from(proxiesSet))
   result.push(...Array.from(builtInProxiesSet).map((v) => ({ type: v, tag: v })))
 
   return result
