@@ -164,6 +164,70 @@ export const RulesTypeOptions = [
     label: 'kernel.rules.type.inline',
     value: RuleType.Inline,
   },
+  {
+    label: 'kernel.rules.type.query_type',
+    value: RuleType.QueryType,
+  },
+  {
+    label: 'kernel.rules.type.source_format',
+    value: RuleType.SourceFormat,
+  },
+  {
+    label: 'kernel.rules.type.client',
+    value: RuleType.Client,
+  },
+  {
+    label: 'kernel.rules.type.preferred_by',
+    value: RuleType.PreferredBy,
+  },
+  {
+    label: 'kernel.rules.type.network_type',
+    value: RuleType.NetworkType,
+  },
+  {
+    label: 'kernel.rules.type.network_is_expensive',
+    value: RuleType.NetworkIsExpensive,
+  },
+  {
+    label: 'kernel.rules.type.network_is_constrained',
+    value: RuleType.NetworkIsConstrained,
+  },
+  {
+    label: 'kernel.rules.type.wifi_ssid',
+    value: RuleType.WifiSsid,
+  },
+  {
+    label: 'kernel.rules.type.wifi_bssid',
+    value: RuleType.WifiBssid,
+  },
+  {
+    label: 'kernel.rules.type.package_name',
+    value: RuleType.PackageName,
+  },
+  {
+    label: 'kernel.rules.type.user',
+    value: RuleType.User,
+  },
+  {
+    label: 'kernel.rules.type.user_id',
+    value: RuleType.UserId,
+  },
+  {
+    label: 'kernel.rules.type.source_ip_is_private',
+    value: RuleType.SourceIPCidrIsPrivate,
+  },
+  {
+    label: 'kernel.rules.type.source_geoip',
+    value: RuleType.SourceGeoIP,
+  },
+  {
+    label: 'kernel.rules.type.geoip',
+    value: RuleType.GeoIP,
+  },
+  {
+    label: 'kernel.rules.type.geosite',
+    value: RuleType.GeoSite,
+  },
 ]
 
 export const DnsRuleTypeOptions = RulesTypeOptions.concat([

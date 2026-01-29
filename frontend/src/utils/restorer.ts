@@ -62,19 +62,15 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
     script: Defaults.DefaultScript(),
   }
 
-  const InboundsIds = config.inbounds.reduce(
+  const InboundsIds = (config.inbounds || []).reduce(
     (p: any, c: any) => ({ ...p, [c.tag]: sampleID() }),
     {},
   )
-  const OutboundsIds = config.outbounds.reduce(
+  const OutboundsIds = (config.outbounds || []).reduce(
     (p: any, c: any) => ({ ...p, [c.tag]: sampleID() }),
     {},
   )
-  // const RulesetIds = config.route.rule_set.reduce(
-  //   (p: any, c: any) => ({ ...p, [c.tag]: sampleID() }),
-  //   {}
-  // )
-  const DnsServersIds = config.dns.servers.reduce(
+  const DnsServersIds = (config.dns?.servers || []).reduce(
     (p: any, c: any) => ({ ...p, [c.tag]: sampleID() }),
     {},
   )
@@ -178,12 +174,13 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
             id: sampleID(),
             type,
             action: rule.action || RuleAction.Route,
-            payload: rule[type] || '',
+            payload: Array.isArray(rule[type]) ? rule[type].join(',') : String(rule[type] || ''),
             enable: true,
           }
         }),
         rule_set: (value.rule_set || []).map((rs: any) => ({
-          id: sampleID(),
+          ...rs,
+          id: rs.tag,
           tag: rs.tag,
           type: rs.type,
           format: rs.format,
@@ -205,59 +202,6 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
           client_subnet: value.default_domain_resolver?.client_subnet || '',
         },
       }
-
-      // Fix Rule Payload: The UI expects `payload` to be a string (comma separated) for list types.
-      profile.route.rules = profile.route.rules.map((r: any) => {
-        const key = r.type // e.g. 'domain', 'ip_cidr'
-
-        let payload = r[key]
-        if (Array.isArray(payload)) {
-          payload = payload.join(',')
-        } else if (typeof payload === 'boolean') {
-          payload = String(payload)
-        }
-        // If payload is undefined, maybe it is stored in `payload` already? No, raw config doesn't have `payload`.
-
-        // Let's try to fetch it from the rule object itself
-        // Iterate common keys?
-        if (
-          [
-            'domain',
-            'domain_suffix',
-            'domain_keyword',
-            'domain_regex',
-            'geosite',
-            'ip_cidr',
-            'ip_is_private',
-            'geoip',
-            'source_ip_cidr',
-            'source_port',
-            'source_port_range',
-            'port',
-            'port_range',
-            'process_name',
-            'process_path',
-            'package_name',
-            'wifi_ssid',
-            'wifi_bssid',
-            'rule_set',
-            'clash_mode',
-            'invert',
-          ].includes(key)
-        ) {
-          let rawPayload = r[key]
-          if (Array.isArray(rawPayload)) {
-            payload = rawPayload.join(',')
-          } else {
-            payload = String(rawPayload ?? '')
-          }
-        }
-
-        return {
-          ...r,
-          payload: payload,
-        }
-      })
     } else if (field === 'dns') {
       profile.dns = {
         disable_cache: value.disable_cache ?? false,
@@ -283,7 +227,7 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
           if (!type) return []
 
           const extra: Recordable = {}
-          if (rule.action === RuleAction.Resolve) {
+          if ([RuleAction.Route, RuleAction.Resolve].includes((rule.action || RuleAction.Route) as any)) {
             extra.server = DnsServersIds[rule.server] || rule.server
           }
           return {
@@ -292,7 +236,7 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
             id: sampleID(),
             type,
             action: rule.action || RuleAction.Route,
-            payload: rule[type] || '',
+            payload: Array.isArray(rule[type]) ? rule[type].join(',') : String(rule[type] || ''),
             enable: true,
           }
         }),
