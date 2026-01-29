@@ -22,12 +22,15 @@ import (
 
 var Config = &AppConfig{}
 
+// Version can be set at build time via -ldflags
+var Version = "v1.19.0"
+
 var Env = &EnvResult{
 	IsStartup:    true,
 	FromTaskSch:  false,
 	WebviewPath:  "",
 	AppName:      "",
-	AppVersion:   "v1.19.0",
+	AppVersion:   Version,
 	BasePath:     "",
 	OS:           sysruntime.GOOS,
 	ARCH:         sysruntime.GOARCH,
