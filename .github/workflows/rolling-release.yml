@@ -12,7 +12,6 @@ jobs:
   Build:
     permissions: write-all
     runs-on: ubuntu-latest
-    if: github.repository == 'GUI-for-Cores/GUI.for.SingBox'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,6 +57,4 @@ jobs:
           overwrite: true
           draft: false
           prerelease: true
-          body: |
-            Rolling release built by GitHub Actions.
-            To use this version, please install the "Rolling Release Assistant" plugin and enable "Enable Rolling Release" within the app.
+          body_file: changelog.md
