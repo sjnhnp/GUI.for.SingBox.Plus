@@ -173,8 +173,23 @@ const renderRule = (rule: IRule) => {
   } else if (type === RuleType.Logical) {
     const subSummaries = (rule.rules || [])
       .map((r: any) => {
-        const t = r.type === RuleType.Inline ? '' : r.type + ':'
-        return (r.invert ? '!' : '') + t + r.payload.substring(0, 20)
+        const invert = r.invert ? '!' : ''
+        if (r.payload) {
+          const t = r.type === RuleType.Inline ? '' : r.type + ':'
+          return invert + t + r.payload.substring(0, 20)
+        }
+        // Fallback for nested rules without GUI payload
+        const matchers = [
+          'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'geosite',
+          'ip_cidr', 'ip_is_private', 'geoip', 'source_ip_cidr', 'source_geoip',
+          'source_port', 'port', 'rule_set', 'inbound', 'protocol', 'network'
+        ]
+        const key = matchers.find(k => r[k] !== undefined)
+        if (key) {
+          const val = Array.isArray(r[key]) ? r[key].join(',') : String(r[key])
+          return invert + key + ':' + val.substring(0, 20)
+        }
+        return invert + (r.action || 'rule')
       })
       .slice(0, 2)
     _payload = `${rule.mode}[${subSummaries.join(', ')}${rule.rules && rule.rules.length > 2 ? '...' : ''}]`
