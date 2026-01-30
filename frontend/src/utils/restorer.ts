@@ -51,18 +51,20 @@ const restoreRule = (
   const extra: Recordable = {}
   const action = rule.action || RuleAction.Route
 
-  if (isDns) {
-    if ([RuleAction.Route, RuleAction.Resolve].includes(action as any)) {
-      extra.server = DnsServersIds[rule.server] || rule.server || ''
-    }
-  } else {
-    if (action === RuleAction.Route) {
-      extra.outbound = OutboundsIds[rule.outbound] || rule.outbound || ''
-    } else if (action === RuleAction.Resolve) {
-      extra.server = DnsServersIds[rule.server] || rule.server || ''
-      if (rule.strategy) extra.strategy = rule.strategy
-    } else if (action === RuleAction.Reject) {
-      extra.outbound = rule.method || 'default'
+  if (!isNested) {
+    if (isDns) {
+      if ([RuleAction.Route, RuleAction.Resolve].includes(action as any)) {
+        extra.server = DnsServersIds[rule.server] || rule.server || ''
+      }
+    } else {
+      if (action === RuleAction.Route) {
+        extra.outbound = OutboundsIds[rule.outbound] || rule.outbound || ''
+      } else if (action === RuleAction.Resolve) {
+        extra.server = DnsServersIds[rule.server] || rule.server || ''
+        if (rule.strategy) extra.strategy = rule.strategy
+      } else if (action === RuleAction.Reject) {
+        extra.outbound = rule.method || 'default'
+      }
     }
   }
 
