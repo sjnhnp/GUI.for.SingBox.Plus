@@ -133,6 +133,7 @@ const hasLost = (rule: IRule) => {
     rulesValidationFlags.push(hasMissingInbound)
   } else if (rule.type === RuleType.IpIsPrivate) {
     rulesValidationFlags.push(!['true', 'false'].includes(rule.payload))
+  }
   if (rule.type === RuleType.RuleSet) {
     rulesValidationFlags.push(hasMissingRuleset)
   }
