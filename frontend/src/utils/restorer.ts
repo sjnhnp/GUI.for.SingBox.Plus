@@ -53,13 +53,13 @@ const restoreRule = (
 
   if (isDns) {
     if ([RuleAction.Route, RuleAction.Resolve].includes(action as any)) {
-      if (rule.server) extra.server = DnsServersIds[rule.server] || rule.server
+      extra.server = DnsServersIds[rule.server] || rule.server || ''
     }
   } else {
     if (action === RuleAction.Route) {
-      if (rule.outbound) extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
+      extra.outbound = OutboundsIds[rule.outbound] || rule.outbound || ''
     } else if (action === RuleAction.Resolve) {
-      if (rule.server) extra.server = DnsServersIds[rule.server] || rule.server
+      extra.server = DnsServersIds[rule.server] || rule.server || ''
       if (rule.strategy) extra.strategy = rule.strategy
     } else if (action === RuleAction.Reject) {
       extra.outbound = rule.method || 'default'
