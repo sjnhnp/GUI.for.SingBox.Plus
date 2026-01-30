@@ -161,9 +161,6 @@ const logicalPayload = computed({
 const renderRule = (rule: IRule) => {
   const { type, payload, outbound, action, invert } = rule
   const children: string[] = []
-  
-  // Display type if not standard or if needed
-  if (type) children.push(type)
 
   let _payload = payload
   if (type === RuleType.RuleSet) {
@@ -174,24 +171,42 @@ const renderRule = (rule: IRule) => {
   } else if (type === RuleType.Inbound) {
     _payload = props.inboundOptions.find((v) => v.value === rule.payload)?.label || rule.payload
   } else if (type === RuleType.Logical) {
-     _payload = rule.mode + ' (' + (rule.rules?.length || 0) + ')'
+    const subSummaries = (rule.rules || [])
+      .map((r: any) => {
+        const t = r.type === RuleType.Inline ? '' : r.type + ':'
+        return (r.invert ? '!' : '') + t + r.payload.substring(0, 20)
+      })
+      .slice(0, 2)
+    _payload = `${rule.mode}[${subSummaries.join(', ')}${rule.rules && rule.rules.length > 2 ? '...' : ''}]`
+  } else if (type === RuleType.Inline) {
+    if (payload === '{}' || !payload) {
+      _payload = ''
+    } else {
+      // Shorten long JSON payloads for better display
+      _payload = payload.length > 40 ? payload.substring(0, 40) + '...' : payload
+    }
   }
 
-  if (invert) {
+  // Only push type if it's not the main descriptor (like in Inbound/RuleSet)
+  if (type && type !== RuleType.Inline && type !== RuleType.Logical) {
+    children.push(type)
+  }
+
+  if (invert && type !== RuleType.Logical) {
     _payload += ` (invert) `
   }
-  
+
   if (_payload) children.push(_payload)
-  
+
   children.push(action)
-  
+
   if (outbound) {
     const proxy = props.outboundOptions.find((v) => v.value === outbound)?.label || outbound
     children.push(proxy)
   }
-   // Special handling for Resolve action strategies
+  // Special handling for Resolve action strategies
   if (action === RuleAction.Resolve && rule.strategy) {
-      children.push(rule.strategy)
+    children.push(rule.strategy)
   }
 
   return children.join(',')

@@ -43,7 +43,8 @@ const restoreRule = (
   OutboundsIds: any,
   DnsServersIds: any,
   isDns?: boolean,
-): IRule | undefined => {
+  isNested?: boolean,
+): any | undefined => {
   const type = detectRuleType(rule)
   if (!type) return undefined
 
@@ -52,13 +53,13 @@ const restoreRule = (
 
   if (isDns) {
     if ([RuleAction.Route, RuleAction.Resolve].includes(action as any)) {
-      extra.server = DnsServersIds[rule.server] || rule.server
+      if (rule.server) extra.server = DnsServersIds[rule.server] || rule.server
     }
   } else {
     if (action === RuleAction.Route) {
-      extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
+      if (rule.outbound) extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
     } else if (action === RuleAction.Resolve) {
-      extra.server = DnsServersIds[rule.server] || rule.server
+      if (rule.server) extra.server = DnsServersIds[rule.server] || rule.server
       if (rule.strategy) extra.strategy = rule.strategy
     } else if (action === RuleAction.Reject) {
       extra.outbound = rule.method || 'default'
@@ -69,6 +70,22 @@ const restoreRule = (
     if (rule.sniffer) extra.sniffer = rule.sniffer
   }
   if (rule.invert) extra.invert = rule.invert
+
+  // Special handling for rule_set tag mapping in nested/inline rules
+  if (rule.rule_set) {
+    extra.rule_set = (Array.isArray(rule.rule_set) ? rule.rule_set : [rule.rule_set]).map(
+      (tag: string) => (typeof tag === 'string' ? tag : tag),
+    )
+  }
+
+  if (isNested) {
+    // For nested rules, we want to keep them close to original SingBox format
+    // but with mapped IDs/Tags where necessary.
+    return {
+      ...rule,
+      ...extra,
+    }
+  }
 
   const restored: any = {
     ...rule,
@@ -87,7 +104,7 @@ const restoreRule = (
 
   if (type === 'logical' && rule.rules) {
     restored.rules = rule.rules
-      .map((r: any) => restoreRule(r, OutboundsIds, DnsServersIds, isDns))
+      .map((r: any) => restoreRule(r, OutboundsIds, DnsServersIds, isDns, true))
       .filter(Boolean)
   }
 
