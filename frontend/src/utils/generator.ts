@@ -33,7 +33,13 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
     res.action = action
   }
 
-  if (type === RuleType.Inline) {
+  if (type === RuleType.Logical) {
+    res.type = 'logical'
+    if ((rule as any).mode) res.mode = (rule as any).mode
+    if ((rule as any).rules) {
+      res.rules = (rule as any).rules.map((r: any) => _generateRule(r, rule_set, inbounds))
+    }
+  } else if (type === RuleType.Inline) {
     if (payload) {
       try {
         deepAssign(res, JSON.parse(payload))

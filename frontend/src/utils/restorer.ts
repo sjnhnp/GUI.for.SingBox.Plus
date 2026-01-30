@@ -4,7 +4,7 @@ import { Inbound, Outbound, RuleAction, Strategy, TunStack } from '@/enums/kerne
 import { deepAssign, sampleID } from './others'
 
 const detectRuleType = (rule: any) => {
-  if (rule.type && !['logical', 'inline'].includes(rule.type)) return rule.type
+  if (rule.type && !['inline'].includes(rule.type)) return rule.type
   const matchers = [
     'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'geosite',
     'ip_cidr', 'ip_is_private', 'geoip', 'source_ip_cidr', 'source_geoip',
@@ -16,7 +16,9 @@ const detectRuleType = (rule: any) => {
   ]
   const foundMatchers = matchers.filter((k) => rule[k] !== undefined)
   if (foundMatchers.length > 1) return 'inline'
-  return foundMatchers[0]
+  if (foundMatchers.length === 1) return foundMatchers[0]
+  if (rule.action || rule.outbound || rule.server) return 'inline'
+  return undefined
 }
 
 const getInlinePayload = (rule: any) => {
@@ -34,6 +36,62 @@ const getInlinePayload = (rule: any) => {
     if (rule[k] !== undefined) res[k] = rule[k]
   })
   return JSON.stringify(res, null, 2)
+}
+
+const restoreRule = (
+  rule: any,
+  OutboundsIds: any,
+  DnsServersIds: any,
+  isDns?: boolean,
+): IRule | undefined => {
+  const type = detectRuleType(rule)
+  if (!type) return undefined
+
+  const extra: Recordable = {}
+  const action = rule.action || RuleAction.Route
+
+  if (isDns) {
+    if ([RuleAction.Route, RuleAction.Resolve].includes(action as any)) {
+      extra.server = DnsServersIds[rule.server] || rule.server
+    }
+  } else {
+    if (action === RuleAction.Route) {
+      extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
+    } else if (action === RuleAction.Resolve) {
+      extra.server = DnsServersIds[rule.server] || rule.server
+      if (rule.strategy) extra.strategy = rule.strategy
+    } else if (action === RuleAction.Reject) {
+      extra.outbound = rule.method || 'default'
+    }
+  }
+
+  if (action === RuleAction.Sniff) {
+    if (rule.sniffer) extra.sniffer = rule.sniffer
+  }
+  if (rule.invert) extra.invert = rule.invert
+
+  const restored: any = {
+    ...rule,
+    ...extra,
+    id: sampleID(),
+    type,
+    action: rule.action || RuleAction.Route,
+    payload:
+      type === 'inline'
+        ? getInlinePayload(rule)
+        : Array.isArray(rule[type])
+          ? rule[type].join(',')
+          : String(rule[type] || ''),
+    enable: true,
+  }
+
+  if (type === 'logical' && rule.rules) {
+    restored.rules = rule.rules
+      .map((r: any) => restoreRule(r, OutboundsIds, DnsServersIds, isDns))
+      .filter(Boolean)
+  }
+
+  return restored
 }
 
 export const restoreProfile = (config: Recordable, subId?: string) => {
@@ -175,30 +233,8 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
     } else if (field === 'route') {
       profile.route = {
         rules: (value.rules || []).flatMap((rule: any) => {
-          const type = detectRuleType(rule)
-          if (!type) return []
-
-          const extra: Recordable = {}
-          const action = rule.action || RuleAction.Route
-          if (action === RuleAction.Route) {
-            extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
-          } else if (action === RuleAction.Resolve) {
-            extra.server = DnsServersIds[rule.server] || rule.server
-            if (rule.strategy) extra.strategy = rule.strategy
-          } else if (action === RuleAction.Sniff) {
-            if (rule.sniffer) extra.sniffer = rule.sniffer
-          }
-          if (rule.invert) extra.invert = rule.invert
-
-          return {
-            ...rule,
-            ...extra,
-            id: sampleID(),
-            type,
-            action: rule.action || RuleAction.Route,
-            payload: type === 'inline' ? getInlinePayload(rule) : (Array.isArray(rule[type]) ? rule[type].join(',') : String(rule[type] || '')),
-            enable: true,
-          }
+          const res = restoreRule(rule, OutboundsIds, DnsServersIds, false)
+          return res ? [res] : []
         }),
         rule_set: (value.rule_set || []).map((rs: any) => ({
           ...rs,
@@ -245,22 +281,8 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
           return res
         }),
         rules: (value.rules || []).flatMap((rule: any) => {
-          const type = detectRuleType(rule)
-          if (!type) return []
-
-          const extra: Recordable = {}
-          if ([RuleAction.Route, RuleAction.Resolve].includes((rule.action || RuleAction.Route) as any)) {
-            extra.server = DnsServersIds[rule.server] || rule.server
-          }
-          return {
-            ...rule,
-            ...extra,
-            id: sampleID(),
-            type,
-            action: rule.action || RuleAction.Route,
-            payload: type === 'inline' ? getInlinePayload(rule) : (Array.isArray(rule[type]) ? rule[type].join(',') : String(rule[type] || '')),
-            enable: true,
-          }
+          const res = restoreRule(rule, {}, DnsServersIds, true)
+          return res ? [res] : []
         }),
         reverse_mapping: !!value.reverse_mapping,
         cache_capacity: value.cache_capacity,
