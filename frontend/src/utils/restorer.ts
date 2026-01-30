@@ -58,7 +58,7 @@ const restoreRule = (
     if (action === RuleAction.Route) {
       extra.outbound = OutboundsIds[rule.outbound] || rule.outbound
     } else if (action === RuleAction.Resolve) {
-      extra.server = DnsServersIds[rule.server] || rule.server
+      extra.server = DnsServersIds[rule.server] || rule.server || ''
       if (rule.strategy) extra.strategy = rule.strategy
     } else if (action === RuleAction.Reject) {
       extra.outbound = rule.method || 'default'
