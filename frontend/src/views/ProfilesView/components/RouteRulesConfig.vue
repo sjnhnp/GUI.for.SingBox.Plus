@@ -133,9 +133,11 @@ const hasLost = (rule: IRule) => {
     rulesValidationFlags.push(hasMissingInbound)
   } else if (rule.type === RuleType.IpIsPrivate) {
     rulesValidationFlags.push(!['true', 'false'].includes(rule.payload))
-  } else if (rule.type === RuleType.RuleSet) {
+  if (rule.type === RuleType.RuleSet) {
     rulesValidationFlags.push(hasMissingRuleset)
   }
+  // Logical rules uses 'rules' prop, payload might be empty
+  if (rule.type === RuleType.Logical) return false
   return rulesValidationFlags.some((v) => v) || !rule.payload
 }
 
@@ -157,7 +159,11 @@ const logicalPayload = computed({
 
 const renderRule = (rule: IRule) => {
   const { type, payload, outbound, action, invert } = rule
-  const children: string[] = [type]
+  const children: string[] = []
+  
+  // Display type if not standard or if needed
+  if (type) children.push(type)
+
   let _payload = payload
   if (type === RuleType.RuleSet) {
     _payload = rule.payload
@@ -167,20 +173,26 @@ const renderRule = (rule: IRule) => {
   } else if (type === RuleType.Inbound) {
     _payload = props.inboundOptions.find((v) => v.value === rule.payload)?.label || rule.payload
   } else if (type === RuleType.Logical) {
-    _payload = rule.mode + ' (' + (rule.rules?.length || 0) + ')'
+     _payload = rule.mode + ' (' + (rule.rules?.length || 0) + ')'
   }
+
   if (invert) {
     _payload += ` (invert) `
   }
-  // If payload is empty (e.g. logical rule), avoid pushing empty string? 
-  // But renderRule joins with comma.
+  
   if (_payload) children.push(_payload)
+  
   children.push(action)
   
   if (outbound) {
     const proxy = props.outboundOptions.find((v) => v.value === outbound)?.label || outbound
     children.push(proxy)
   }
+   // Special handling for Resolve action strategies
+  if (action === RuleAction.Resolve && rule.strategy) {
+      children.push(rule.strategy)
+  }
+
   return children.join(',')
 }
 </script>
