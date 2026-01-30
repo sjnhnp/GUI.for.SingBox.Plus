@@ -20,7 +20,7 @@ import {
   Strategy,
 } from '@/enums/kernel'
 import { useBool } from '@/hooks'
-import { deepClone, message } from '@/utils'
+import { deepClone, message, sampleID } from '@/utils'
 
 interface Props {
   inboundOptions: { label: string; value: string }[]
@@ -147,15 +147,51 @@ const logicalPayload = computed({
     // Only return JSON if type is Logical to avoid errors
     if (fields.value.type !== RuleType.Logical) return ''
     const { mode, rules } = fields.value
-    return JSON.stringify({ mode, rules }, null, 2)
+
+    const cleanRules = rules?.map((rule: any) => {
+      const {
+        id,
+        enable,
+        action,
+        outbound,
+        sniffer,
+        strategy,
+        server,
+        payload,
+        type,
+        ...rest
+      } = rule
+      if (type === RuleType.Logical) {
+        return { type, ...rest }
+      }
+      return rest
+    })
+
+    return JSON.stringify({ mode, rules: cleanRules }, null, 2)
   },
   set: (val) => {
     try {
       const obj = JSON.parse(val)
       fields.value.mode = obj.mode
-      fields.value.rules = obj.rules
+      fields.value.rules = obj.rules?.map((rule: any) => {
+        if (rule.type === RuleType.Logical) return rule
+
+        return {
+          id: sampleID(),
+          type: RuleType.Inline,
+          enable: true,
+          payload: JSON.stringify(rule, null, 2),
+          invert: !!rule.invert,
+          action: RuleAction.Route,
+          outbound: '',
+          sniffer: [],
+          strategy: Strategy.Default,
+          server: '',
+          ...rule,
+        }
+      })
     } catch {}
-  }
+  },
 })
 
 const renderRule = (rule: IRule) => {
