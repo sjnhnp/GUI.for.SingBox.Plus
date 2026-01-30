@@ -144,6 +144,7 @@ type RuleType =
   | 'outbound'
   | 'inline'
   | 'InsertionPoint'
+  | 'logical'
 
 interface IRule {
   id: string
@@ -159,6 +160,9 @@ interface IRule {
   // action = resolve
   strategy: Strategy
   server: string
+  // logical
+  mode?: string
+  rules?: any[]
 }
 
 interface IRoute {

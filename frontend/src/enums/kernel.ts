@@ -85,6 +85,7 @@ export enum RuleType {
   // GUI
   Inline = 'inline',
   InsertionPoint = 'InsertionPoint',
+  Logical = 'logical',
 }
 
 export enum Strategy {

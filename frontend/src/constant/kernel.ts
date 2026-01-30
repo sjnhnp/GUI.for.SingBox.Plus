@@ -228,6 +228,10 @@ export const RulesTypeOptions = [
     label: 'kernel.rules.type.geosite',
     value: RuleType.GeoSite,
   },
+  {
+    label: 'kernel.rules.type.logical',
+    value: RuleType.Logical,
+  },
 ]
 
 export const DnsRuleTypeOptions = RulesTypeOptions.concat([

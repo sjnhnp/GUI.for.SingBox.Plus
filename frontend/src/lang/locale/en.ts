@@ -241,6 +241,7 @@ export default {
         rule_set: 'rule_set',
         ip_accept_any: 'ip_accept_any',
         inline: 'Inline',
+        logical: 'Logical',
       },
     },
     strategy: {

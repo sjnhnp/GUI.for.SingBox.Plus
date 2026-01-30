@@ -241,6 +241,7 @@ export default {
         rule_set: '规则集(rule_set)',
         ip_accept_any: '匹配任意 IP(ip_accept_any)',
         inline: '内联(Inline)',
+        logical: '逻辑规则(logical)',
         query_type: '查询类型(query_type)',
         client: '客户端探测(client)',
         preferred_by: '首选出站(preferred_by)',

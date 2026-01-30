@@ -139,6 +139,22 @@ const hasLost = (rule: IRule) => {
   return rulesValidationFlags.some((v) => v) || !rule.payload
 }
 
+const logicalPayload = computed({
+  get: () => {
+    // Only return JSON if type is Logical to avoid errors
+    if (fields.value.type !== RuleType.Logical) return ''
+    const { mode, rules } = fields.value
+    return JSON.stringify({ mode, rules }, null, 2)
+  },
+  set: (val) => {
+    try {
+      const obj = JSON.parse(val)
+      fields.value.mode = obj.mode
+      fields.value.rules = obj.rules
+    } catch {}
+  }
+})
+
 const renderRule = (rule: IRule) => {
   const { type, payload, outbound, action, invert } = rule
   const children: string[] = [type]
@@ -150,11 +166,17 @@ const renderRule = (rule: IRule) => {
       .join(',')
   } else if (type === RuleType.Inbound) {
     _payload = props.inboundOptions.find((v) => v.value === rule.payload)?.label || rule.payload
+  } else if (type === RuleType.Logical) {
+    _payload = rule.mode + ' (' + (rule.rules?.length || 0) + ')'
   }
   if (invert) {
     _payload += ` (invert) `
   }
-  children.push(_payload, action)
+  // If payload is empty (e.g. logical rule), avoid pushing empty string? 
+  // But renderRule joins with comma.
+  if (_payload) children.push(_payload)
+  children.push(action)
+  
   if (outbound) {
     const proxy = props.outboundOptions.find((v) => v.value === outbound)?.label || outbound
     children.push(proxy)
@@ -254,6 +276,13 @@ const renderRule = (rule: IRule) => {
       <CodeViewer
         v-else-if="fields.type === RuleType.Inline"
         v-model="fields.payload"
+        editable
+        lang="json"
+        style="min-width: 320px"
+      />
+      <CodeViewer
+        v-else-if="fields.type === RuleType.Logical"
+        v-model="logicalPayload"
         editable
         lang="json"
         style="min-width: 320px"
