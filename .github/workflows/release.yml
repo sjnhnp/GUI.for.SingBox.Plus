@@ -310,6 +310,30 @@ jobs:
         with:
           path: release-assets
       
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          set +e
+          # Try to find the latest tag before the current one (or HEAD)
+          # fetching all tags first because checkout might not have them all? (depth 0 handles it)
+          LATEST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null)
+          
+          echo "Previous tag: $LATEST_TAG"
+          
+          echo "## Change log" > changelog.md
+          echo "" >> changelog.md
+          echo "> Update time: $(date "+%Y-%m-%d %H:%M:%S")" >> changelog.md
+          echo "" >> changelog.md
+          
+          if [ -z "$LATEST_TAG" ]; then
+             echo "No previous tag found. Listing all commits:"
+             git log --pretty=format:"* %s" >> changelog.md
+          else
+             echo "Changes since $LATEST_TAG:"
+             git log $LATEST_TAG..HEAD --pretty=format:"* %s" >> changelog.md
+          fi
+          set -e
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -318,6 +342,4 @@ jobs:
           files: release-assets/**/*.zip
           draft: false
           prerelease: false
-          body: |
-            Release ${{ env.TAG_NAME }}
-            Auto-generated release from GitHub Actions.
+          body_path: changelog.md
