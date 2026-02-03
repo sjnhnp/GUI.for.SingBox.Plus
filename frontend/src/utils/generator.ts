@@ -310,9 +310,13 @@ const generateDns = (
         ].includes(server.type as any)
       ) {
         if (server.detour) {
-          const outbound = getOutbound(server.detour)
-          if (outbound?.type !== Outbound.Direct) {
-            extra.detour = outbound?.tag
+          const outbound = outbounds.find((v) => v.id === server.detour)
+          if (outbound) {
+            if (outbound.type !== Outbound.Direct) {
+              extra.detour = outbound.tag
+            }
+          } else if (server.detour !== Outbound.Direct) {
+            extra.detour = server.detour
           }
         }
         server.domain_resolver && (extra.domain_resolver = getDnsServer(server.domain_resolver))
