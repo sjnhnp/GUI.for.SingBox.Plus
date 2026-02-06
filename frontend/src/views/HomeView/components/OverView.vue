@@ -253,7 +253,7 @@ onUnmounted(() => {
           <Card
             v-for="mode in ModeOptions"
             :key="mode.value"
-            :selected="kernelApiStore.config.mode === mode.value"
+            :selected="kernelApiStore.config.mode.toLowerCase() === mode.value.toLowerCase()"
             :title="t(mode.label)"
             class="cursor-pointer"
             @click="handleChangeMode(mode.value as any)"
