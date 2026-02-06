@@ -10,7 +10,7 @@ export enum LogLevel {
 
 export enum ClashMode {
   Global = 'Global',
-  Rule = 'Rule',
+  Rule = 'rule',
   Direct = 'Direct',
 }
 
