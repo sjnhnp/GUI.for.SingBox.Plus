@@ -303,7 +303,7 @@ jobs:
           fi
 
       - name: Create and Push Tag
-        if: env.TAG_EXISTS == 'false'
+        if: ${{ env.TAG_EXISTS == 'false' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
