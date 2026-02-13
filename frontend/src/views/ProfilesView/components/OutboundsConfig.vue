@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { DraggableOptions } from '@/constant/app'
@@ -10,6 +10,19 @@ import { useSubscribesStore } from '@/stores'
 import { deepClone, message } from '@/utils'
 
 const model = defineModel<IProfile['outbounds']>({ required: true })
+
+const isStrategy = (type: string) =>
+  [Outbound.Selector, Outbound.Urltest, Outbound.Direct, Outbound.Block].includes(type as any)
+
+const strategyGroups = computed({
+  get: () => model.value.filter((v) => isStrategy(v.type)),
+  set: (val) => {
+    const proxies = model.value.filter((v) => !isStrategy(v.type))
+    model.value = [...val, ...proxies]
+  },
+})
+
+const proxyNodes = computed(() => model.value.filter((v) => !isStrategy(v.type)))
 
 let updateGroupId = 0
 const showEditModal = ref(false)
@@ -46,7 +59,9 @@ const handleAdd = () => {
 
 defineExpose({ handleAdd })
 
-const handleDeleteGroup = (index: number) => {
+const handleDeleteGroup = (outbound: IOutbound) => {
+  const index = model.value.findIndex((v) => v.id === outbound.id)
+  if (index === -1) return
   const id = model.value[index]!.id
   model.value.splice(index, 1)
   proxyGroup.value = proxyGroup.value.map((v) => ({
@@ -91,9 +106,10 @@ const handleAddEnd = () => {
   }
 }
 
-const handleEditGroup = (index: number) => {
+const handleEditGroup = (outbound: IOutbound) => {
+  const index = model.value.findIndex((v) => v.id === outbound.id)
   updateGroupId = index
-  fields.value = deepClone(model.value[index]!)
+  fields.value = deepClone(outbound)
   showEditModal.value = true
 }
 
@@ -134,9 +150,10 @@ const hasLost = (outbound: IOutbound) => {
   return false
 }
 
-const handleSortGroup = (index: number) => {
+const handleSortGroup = (outbound: IOutbound) => {
+  const index = model.value.findIndex((v) => v.id === outbound.id)
   updateGroupId = index
-  fields.value = deepClone(model.value[index]!)
+  fields.value = deepClone(outbound)
   showSortModal.value = true
 }
 
@@ -195,8 +212,8 @@ subscribesStore.subscribes.forEach(async ({ id, name, proxies }) => {
     </template>
   </Empty>
 
-  <div v-draggable="[model, DraggableOptions]">
-    <Card v-for="(outbound, index) in model" :key="outbound.id" class="mb-2">
+  <div v-draggable="[strategyGroups, DraggableOptions]">
+    <Card v-for="outbound in strategyGroups" :key="outbound.id" class="mb-2">
       <div class="flex items-center py-2">
         <div class="font-bold" style="min-width: 90px">
           <span
@@ -217,7 +234,7 @@ subscribesStore.subscribes.forEach(async ({ id, name, proxies }) => {
           </span>
           {{ outbound.tag }}
         </div>
-        <Button type="link" size="small" @click="handleSortGroup(index)">
+        <Button type="link" size="small" @click="handleSortGroup(outbound)">
           (
           {{ t('kernel.outbounds.refsOutbound') }}:{{ clacOutboundsCount(outbound) }}
           /
@@ -228,12 +245,16 @@ subscribesStore.subscribes.forEach(async ({ id, name, proxies }) => {
           <Button v-if="hasLost(outbound)" type="text" @click="handleClearGroup(outbound)">
             {{ t('common.clear') }}
           </Button>
-          <Button icon="edit" type="text" size="small" @click="handleEditGroup(index)" />
-          <Button icon="delete" type="text" size="small" @click="handleDeleteGroup(index)" />
+          <Button icon="edit" type="text" size="small" @click="handleEditGroup(outbound)" />
+          <Button icon="delete" type="text" size="small" @click="handleDeleteGroup(outbound)" />
         </div>
       </div>
     </Card>
   </div>
+
+  <Divider v-if="proxyNodes.length" class="text-12 opacity-50">
+    {{ t('common.details') }} ({{ proxyNodes.length }} {{ t('kernel.outbounds.builtIn') }})
+  </Divider>
 
   <Modal
     v-model:open="showSortModal"

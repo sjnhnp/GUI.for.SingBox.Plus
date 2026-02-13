@@ -251,27 +251,43 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
         }
       })
     } else if (field === 'outbounds') {
-      profile.outbounds = (value || []).map((outbound: any) => {
+      const isStrategy = (type: string) =>
+        [
+          Outbound.Selector,
+          Outbound.Urltest,
+          'url-test',
+          Outbound.Direct,
+          Outbound.Block,
+          'dns',
+          'static',
+        ].includes(type as any)
 
-        const extra: Recordable = { ...outbound }
-        extra.id = OutboundsIds[outbound.tag] || sampleID()
-        if (outbound.outbounds) {
-          extra.outbounds = (outbound.outbounds || []).flatMap((tag: string) => {
-            if (OutboundsIds[tag]) {
-              return {
-                id: OutboundsIds[tag],
-                type: 'Built-in',
-                tag,
+      profile.outbounds = (value || [])
+        .map((outbound: any) => {
+          const extra: Recordable = { ...outbound }
+          extra.id = OutboundsIds[outbound.tag] || sampleID()
+          if (outbound.outbounds) {
+            extra.outbounds = (outbound.outbounds || []).flatMap((tag: string) => {
+              if (OutboundsIds[tag]) {
+                return {
+                  id: OutboundsIds[tag],
+                  type: 'Built-in',
+                  tag,
+                }
               }
-            }
-            if (['direct', 'block'].includes(tag.toLowerCase())) {
-              return { id: tag.toLowerCase(), type: 'Built-in', tag }
-            }
-            return []
-          })
-        }
-        return extra as IOutbound
-      })
+              if (['direct', 'block'].includes(tag.toLowerCase())) {
+                return { id: tag.toLowerCase(), type: 'Built-in', tag }
+              }
+              return []
+            })
+          }
+          return extra as IOutbound
+        })
+        .sort((a: any, b: any) => {
+          const scoreA = isStrategy(a.type) ? 0 : 1
+          const scoreB = isStrategy(b.type) ? 0 : 1
+          return scoreA - scoreB
+        })
     } else if (field === 'route') {
       profile.route = {
         rules: (value.rules || []).flatMap((rule: any) => {
