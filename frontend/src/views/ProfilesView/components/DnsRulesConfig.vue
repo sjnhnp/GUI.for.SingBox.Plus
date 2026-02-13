@@ -114,8 +114,10 @@ const hasLost = (rule: IDNSRule) => {
         return true
       }
       return false
-    } else if ([RuleAction.RouteOptions, RuleAction.Predefined].includes(rule.action as any)) {
+    } else if (rule.action === RuleAction.RouteOptions) {
       return !isValidJson(rule.server)
+    } else if (rule.action === RuleAction.Predefined) {
+      return rule.server !== '' && !isValidJson(rule.server)
     } else if (rule.action === RuleAction.Reject) {
       return ![RuleActionReject.Default, RuleActionReject.Drop].includes(rule.server as any)
     }

@@ -53,6 +53,52 @@ const restoreRule = (
   if (isDns) {
     if ([RuleAction.Route, RuleAction.Resolve].includes(action as any)) {
       extra.server = DnsServersIds[rule.server] || rule.server
+    } else if (action === RuleAction.Predefined) {
+      const matchers = [
+        'domain',
+        'domain_suffix',
+        'domain_keyword',
+        'domain_regex',
+        'geosite',
+        'ip_cidr',
+        'ip_is_private',
+        'geoip',
+        'source_ip_cidr',
+        'source_geoip',
+        'source_ip_is_private',
+        'source_port',
+        'source_port_range',
+        'port',
+        'port_range',
+        'process_name',
+        'process_path',
+        'process_path_regex',
+        'package_name',
+        'user',
+        'user_id',
+        'clash_mode',
+        'network_type',
+        'network_is_expensive',
+        'network_is_constrained',
+        'wifi_ssid',
+        'wifi_bssid',
+        'rule_set',
+        'inbound',
+        'protocol',
+        'network',
+        'query_type',
+        'source_format',
+        'client',
+        'preferred_by',
+        'action',
+        'type',
+        'invert',
+      ]
+      const res: any = {}
+      Object.keys(rule).forEach((k) => {
+        if (!matchers.includes(k)) res[k] = rule[k]
+      })
+      extra.server = JSON.stringify(res, null, 2)
     }
   } else {
     if (action === RuleAction.Route) {
@@ -275,8 +321,14 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
             enable: true,
             ...server,
           }
-          if (server.address && !server.server && !server.type) {
-            // Legacy format - address URL
+          if (server.type === 'hosts' && server.predefined) {
+            res.predefined = Object.entries(server.predefined).reduce(
+              (p, [k, v]) => ({
+                ...p,
+                [k]: Array.isArray(v) ? v.join(',') : v,
+              }),
+              {},
+            )
           }
           return res
         }),
