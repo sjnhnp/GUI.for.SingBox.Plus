@@ -251,20 +251,16 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
         }
       })
     } else if (field === 'outbounds') {
-      profile.outbounds = (value || []).flatMap((outbound: any) => {
-        if (!isStrategy(outbound.type)) return []
+      profile.outbounds = (value || []).map((outbound: any) => {
 
         const extra: Recordable = { ...outbound }
         extra.id = OutboundsIds[outbound.tag] || sampleID()
         if (outbound.outbounds) {
           extra.outbounds = (outbound.outbounds || []).flatMap((tag: string) => {
             if (OutboundsIds[tag]) {
-              const target = (value || []).find((v: any) => v.tag === tag)
-              const type =
-                target && !isStrategy(target.type) ? subId || 'Subscription' : 'Built-in'
               return {
                 id: OutboundsIds[tag],
-                type,
+                type: 'Built-in',
                 tag,
               }
             }
@@ -274,7 +270,7 @@ export const restoreProfile = (config: Recordable, subId?: string) => {
             return []
           })
         }
-        return extra
+        return extra as IOutbound
       })
     } else if (field === 'route') {
       profile.route = {
