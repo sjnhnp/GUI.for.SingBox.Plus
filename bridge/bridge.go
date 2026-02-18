@@ -13,7 +13,6 @@ import (
 
 	sysruntime "runtime"
 
-	"github.com/energye/systray"
 	"github.com/wailsapp/wails/v2/pkg/menu"
 	"github.com/wailsapp/wails/v2/pkg/menu/keys"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -28,6 +27,7 @@ var Version = "v0.0.0-dev"
 
 var Env = &EnvResult{
 	IsStartup:    true,
+	PreventExit:  true,
 	FromTaskSch:  false,
 	WebviewPath:  "",
 	AppName:      "",
@@ -45,7 +45,7 @@ func NewApp() *App {
 	}
 }
 
-func CreateApp(fs embed.FS, icon []byte) *App {
+func CreateApp(fs embed.FS) *App {
 	exePath, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -77,8 +77,6 @@ func CreateApp(fs embed.FS, icon []byte) *App {
 
 	loadConfig()
 
-	go createTray(app, icon)
-
 	return app
 }
 
@@ -92,8 +90,7 @@ func (a *App) IsStartup() bool {
 
 func (a *App) ExitApp() {
 	log.Printf("ExitApp")
-	Env.PreventExit.Store(true)
-	systray.Quit()
+	Env.PreventExit = false
 	runtime.Quit(a.Ctx)
 }
 
@@ -114,7 +111,7 @@ func (a *App) RestartApp() FlagResult {
 }
 
 func (a *App) GetEnv() EnvResult {
-	log.Printf("EnvResult")
+	log.Printf("GetEnv")
 	return EnvResult{
 		AppName:      Env.AppName,
 		AppVersion:   Env.AppVersion,
@@ -145,35 +142,6 @@ func (a *App) GetInterfaces() FlagResult {
 func (a *App) ShowMainWindow() {
 	log.Printf("ShowMainWindow")
 	runtime.WindowShow(a.Ctx)
-}
-
-func createTray(app *App, icon []byte) {
-	sysruntime.LockOSThread()
-	defer sysruntime.UnlockOSThread()
-
-	systray.Run(func() {
-		systray.SetIcon(icon)
-		systray.SetTooltip("GUI.for.Cores")
-
-		systray.SetOnRClick(func(menu systray.IMenu) { menu.ShowMenu() })
-		systray.SetOnClick(func(menu systray.IMenu) {
-			if Env.OS == "darwin" {
-				menu.ShowMenu()
-			} else {
-				app.ShowMainWindow()
-			}
-		})
-
-		addClickMenuItem := func(title, tooltip string, action func()) {
-			m := systray.AddMenuItem(title, tooltip)
-			m.Click(action)
-		}
-
-		// Ensure the tray is still available if rolling-release fails
-		addClickMenuItem("Show", "Show", func() { app.ShowMainWindow() })
-		addClickMenuItem("Restart", "Restart", func() { app.RestartApp() })
-		addClickMenuItem("Exit", "Exit", func() { app.ExitApp() })
-	}, nil)
 }
 
 func createMacOSSymlink() {
