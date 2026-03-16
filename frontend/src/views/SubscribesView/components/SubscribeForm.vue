@@ -110,6 +110,7 @@ defineExpose({ modalSlots })
         <Input
           v-model="sub.url"
           :placeholder="sub.type === 'Http' ? 'http(s)://' : 'data/local/{filename}.json'"
+          allow-paste
           class="w-full"
         />
       </div>
