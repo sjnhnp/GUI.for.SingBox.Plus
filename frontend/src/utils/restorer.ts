@@ -56,6 +56,7 @@ const buildTagIdMapping = (prefix: string, arr?: Recordable[]): Recordable<strin
 
 type RestoreProfileOptions = {
   extraOutboundsIds?: Recordable
+  subscriptionId?: string
 }
 
 export const restoreProfile = (
@@ -65,7 +66,7 @@ export const restoreProfile = (
 ) => {
   const template = useProfilesStore().getProfileTemplate()
 
-  const { extraOutboundsIds } = options
+  const { extraOutboundsIds, subscriptionId } = options
 
   const InboundsIds = buildTagIdMapping('in-', config.inbounds)
   const OutboundsIds = buildTagIdMapping('out-', config.outbounds)
@@ -81,7 +82,7 @@ export const restoreProfile = (
     log: deepAssign(Defaults.DefaultLog(), config.log),
     experimental: restoreExperimental(config.experimental, OutboundsIds),
     inbounds: restoreInbounds(config.inbounds || [], InboundsIds),
-    outbounds: restoreOutbounds(config.outbounds || [], OutboundsIds),
+    outbounds: restoreOutbounds(config.outbounds || [], OutboundsIds, subscriptionId),
     route: {
       rule_set: restoreRouteRuleset(config.route?.rule_set || [], RouteRuleSetIds, OutboundsIds),
       rules: restoreRouteRules(
@@ -125,9 +126,9 @@ export const restoreProfile = (
 
 const restoreExperimental = (raw: Recordable, OutboundsIds: Recordable): IExperimental => {
   const template = Defaults.DefaultExperimental()
-  const experimental = deepAssign(template, raw)
+  const experimental = deepAssign(template, raw || {})
   experimental.clash_api.external_ui_download_detour =
-    OutboundsIds[template.clash_api.external_ui_download_detour]
+    OutboundsIds[raw?.clash_api?.external_ui_download_detour]
   return experimental
 }
 
@@ -171,7 +172,11 @@ const restoreInbounds = (inbounds: Recordable[], InboundsIds: Recordable): IInbo
   })
 }
 
-const restoreOutbounds = (outbounds: Recordable[], OutboundsIds: Recordable): IOutbound[] => {
+const restoreOutbounds = (
+  outbounds: Recordable[],
+  OutboundsIds: Recordable,
+  subscriptionId?: string,
+): IOutbound[] => {
   return outbounds.flatMap((raw) => {
     if (![Outbound.Selector, Outbound.Urltest].includes(raw.type)) {
       return []
@@ -187,9 +192,14 @@ const restoreOutbounds = (outbounds: Recordable[], OutboundsIds: Recordable): IO
       outbound.outbounds = raw.outbounds?.flatMap((tag: string) => {
         if (!OutboundsIds[tag]) return []
         const isBuiltIn = [Outbound.Direct, Outbound.Block].includes(tag as Outbound)
+        if (isBuiltIn) return { id: tag, type: 'Built-in', tag }
+
+        const target = outbounds.find((v) => v.tag === tag)
+        const isStrategy = target && [Outbound.Selector, Outbound.Urltest].includes(target.type)
+
         return {
-          id: isBuiltIn ? tag : OutboundsIds[tag],
-          type: 'Built-in',
+          id: OutboundsIds[tag],
+          type: isStrategy ? 'Built-in' : subscriptionId || 'Built-in',
           tag,
         }
       })
