@@ -290,9 +290,17 @@ const restoreRouteRules = (
         2,
       )
     } else if (rule.type === RouteRuleType.Inbound) {
-      rule.payload = InboundsIds[raw[rule.type]]
+      const val = raw[rule.type]
+      rule.payload = (Array.isArray(val) ? val : [val])
+        .map((tag: string) => InboundsIds[tag])
+        .filter((v) => v)
+        .join(',')
     } else if (rule.type === RouteRuleType.RuleSet) {
-      rule.payload = raw[rule.type].map((tag: string) => RouteRuleSetIds[tag]).join(',')
+      const val = raw[rule.type]
+      rule.payload = (Array.isArray(val) ? val : [val])
+        .map((tag: string) => RouteRuleSetIds[tag])
+        .filter((v) => v)
+        .join(',')
     } else {
       rule.payload = String(raw[rule.type])
     }
@@ -447,9 +455,17 @@ const restoreDnsRules = (
         2,
       )
     } else if (rule.type === RouteRuleType.Inbound) {
-      rule.payload = InboundsIds[raw[rule.type]]
+      const val = raw[rule.type]
+      rule.payload = (Array.isArray(val) ? val : [val])
+        .map((tag: string) => InboundsIds[tag])
+        .filter((v) => v)
+        .join(',')
     } else if (rule.type === RouteRuleType.RuleSet) {
-      rule.payload = raw[rule.type].map((tag: string) => RouteRuleSetIds[tag]).join(',')
+      const val = raw[rule.type]
+      rule.payload = (Array.isArray(val) ? val : [val])
+        .map((tag: string) => RouteRuleSetIds[tag])
+        .filter((v) => v)
+        .join(',')
     } else {
       rule.payload = raw[rule.type]
     }
