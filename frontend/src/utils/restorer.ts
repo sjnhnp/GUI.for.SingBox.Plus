@@ -8,8 +8,9 @@ import {
   DnsServer,
 } from '@/enums/kernel'
 
-import { deepAssign, sampleID } from './others'
-import { useProfilesStore, useRulesetsStore } from '@/stores'
+import { createTextMatcher, deepAssign, sampleID } from './others'
+import { useProfilesStore, useRulesetsStore, useSubscribesStore } from '@/stores'
+import type { Subscription } from '@/types/app'
 
 const supportedRuleTypes = [
   RouteRuleType.Inbound,
@@ -30,6 +31,7 @@ const supportedRuleTypes = [
   RouteRuleType.ProcessPathRegex,
   RouteRuleType.RuleSet,
   RouteRuleType.IpIsPrivate,
+  RouteRuleType.IpAcceptAny,
   RouteRuleType.ClashMode,
   RouteRuleType.GeoIP,
   RouteRuleType.GeoSite,
@@ -56,17 +58,18 @@ const buildTagIdMapping = (prefix: string, arr?: Recordable[]): Recordable<strin
 
 type RestoreProfileOptions = {
   extraOutboundsIds?: Recordable
-  subscriptionId?: string
+  profile?: IProfile
+  subscriptionIds?: string[]
 }
 
 export const restoreProfile = (
   config: Recordable,
   name = sampleID(),
   options: RestoreProfileOptions = {},
-) => {
+): IProfile => {
   const template = useProfilesStore().getProfileTemplate()
 
-  const { extraOutboundsIds, subscriptionId } = options
+  const { extraOutboundsIds, profile, subscriptionIds } = options
 
   const InboundsIds = buildTagIdMapping('in-', config.inbounds)
   const OutboundsIds = buildTagIdMapping('out-', config.outbounds)
@@ -75,14 +78,18 @@ export const restoreProfile = (
 
   extraOutboundsIds && deepAssign(OutboundsIds, extraOutboundsIds)
 
-
-  const profile: IProfile = {
-    id: sampleID(),
+  return {
+    id: profile?.id || sampleID(),
     name,
     log: deepAssign(Defaults.DefaultLog(), config.log),
     experimental: restoreExperimental(config.experimental, OutboundsIds),
     inbounds: restoreInbounds(config.inbounds || [], InboundsIds),
-    outbounds: restoreOutbounds(config.outbounds || [], OutboundsIds, subscriptionId),
+    outbounds: restoreOutbounds(
+      config.outbounds || [],
+      OutboundsIds,
+      profile?.outbounds || [],
+      subscriptionIds || [],
+    ),
     route: {
       rule_set: restoreRouteRuleset(config.route?.rule_set || [], RouteRuleSetIds, OutboundsIds),
       rules: restoreRouteRules(
@@ -116,19 +123,16 @@ export const restoreProfile = (
       servers: restoreDnsServers(config.dns?.servers || [], DnsServersIds, OutboundsIds),
       rules: restoreDnsRules(config.dns?.rules || [], InboundsIds, RouteRuleSetIds, DnsServersIds),
     },
-    mixin: Defaults.DefaultMixin(),
-    script: Defaults.DefaultScript(),
+    mixin: profile?.mixin || Defaults.DefaultMixin(),
+    script: profile?.script || Defaults.DefaultScript(),
   }
-
-
-  return profile
 }
 
 const restoreExperimental = (raw: Recordable, OutboundsIds: Recordable): IExperimental => {
   const template = Defaults.DefaultExperimental()
   const experimental = deepAssign(template, raw || {})
   experimental.clash_api.external_ui_download_detour =
-    OutboundsIds[raw?.clash_api?.external_ui_download_detour]
+    OutboundsIds[raw?.clash_api?.external_ui_download_detour] || ''
   return experimental
 }
 
@@ -175,8 +179,35 @@ const restoreInbounds = (inbounds: Recordable[], InboundsIds: Recordable): IInbo
 const restoreOutbounds = (
   outbounds: Recordable[],
   OutboundsIds: Recordable,
-  subscriptionId?: string,
+  originalOutbounds: IOutbound[],
+  subscriptionIds: string[],
 ): IOutbound[] => {
+  const subscribesStore = useSubscribesStore()
+
+  const subscriptionCache = new Map<string, Subscription>()
+  const proxyToSubMap = new Map<string, { sub: string; id: string }>()
+  const originalOutboundMap = new Map<string, IOutbound>()
+
+  const groupTags = new Set(
+    outbounds
+      .filter((o: Recordable) => [Outbound.Selector, Outbound.Urltest].includes(o.type))
+      .map((o: Recordable) => o.tag),
+  )
+
+  subscriptionIds.forEach((id) => {
+    const sub = subscribesStore.getSubscribeById(id)
+    if (sub) {
+      subscriptionCache.set(id, sub)
+      sub.proxies.forEach((proxy) => {
+        proxyToSubMap.set(proxy.tag, { sub: id, id: proxy.id })
+      })
+    }
+  })
+
+  originalOutbounds.forEach((outbound) => {
+    originalOutboundMap.set(outbound.tag, outbound)
+  })
+
   return outbounds.flatMap((raw) => {
     if (![Outbound.Selector, Outbound.Urltest].includes(raw.type)) {
       return []
@@ -185,24 +216,62 @@ const restoreOutbounds = (
     outbound.id = OutboundsIds[raw.tag]
     outbound.tag = raw.tag
     outbound.type = raw.type
-    if ([Outbound.Selector, Outbound.Urltest].includes(raw.type)) {
-      if ('interrupt_exist_connections' in raw) {
-        outbound.interrupt_exist_connections = raw.interrupt_exist_connections
+
+    let newOutbounds: IProxy[] = []
+
+    raw.outbounds?.forEach((tag: string) => {
+      const isBuiltIn = [Outbound.Direct, Outbound.Block].includes(tag as Outbound)
+      if (isBuiltIn) {
+        newOutbounds.push({ id: tag, type: 'Built-in', tag })
+      } else if (groupTags.has(tag)) {
+        const id = OutboundsIds[tag]
+        if (id) {
+          newOutbounds.push({ id, type: 'Built-in', tag })
+        }
+      } else {
+        const proxy = proxyToSubMap.get(tag)
+        if (proxy) {
+          newOutbounds.push({ id: proxy.id, type: proxy.sub, tag })
+        }
       }
-      outbound.outbounds = raw.outbounds?.flatMap((tag: string) => {
-        if (!OutboundsIds[tag]) return []
-        const isBuiltIn = [Outbound.Direct, Outbound.Block].includes(tag as Outbound)
-        if (isBuiltIn) return { id: tag, type: 'Built-in', tag }
+    })
 
-        const target = outbounds.find((v) => v.tag === tag)
-        const isStrategy = target && [Outbound.Selector, Outbound.Urltest].includes(target.type)
+    const originalGroup = originalOutboundMap.get(outbound.tag)
+    if (originalGroup) {
+      outbound.include = originalGroup.include
+      outbound.exclude = originalGroup.exclude
 
-        return {
-          id: OutboundsIds[tag],
-          type: isStrategy ? 'Built-in' : subscriptionId || 'Built-in',
-          tag,
+      const currentNonBuiltInIds = new Set(
+        newOutbounds.filter((v) => v.type !== 'Built-in').map((v) => v.id),
+      )
+
+      subscriptionIds.forEach((id) => {
+        const sub = subscriptionCache.get(id)
+        if (sub) {
+          const isTagMatching = createTextMatcher(originalGroup.include, originalGroup.exclude)
+          const matchedProxies = sub.proxies.filter((proxy) => isTagMatching(proxy.tag))
+
+          const isAllMatched =
+            matchedProxies.length > 0 &&
+            matchedProxies.every((proxy) => currentNonBuiltInIds.has(proxy.id))
+
+          if (isAllMatched) {
+            const matchedIds = new Set(matchedProxies.map((p) => p.id))
+            newOutbounds = newOutbounds.filter(
+              (v) => v.type === 'Built-in' || !matchedIds.has(v.id),
+            )
+            newOutbounds.push({ id: sub.id, type: 'Subscription', tag: sub.name })
+
+            matchedIds.forEach((matchedId) => currentNonBuiltInIds.delete(matchedId))
+          }
         }
       })
+    }
+
+    outbound.outbounds = newOutbounds
+
+    if ('interrupt_exist_connections' in raw) {
+      outbound.interrupt_exist_connections = raw.interrupt_exist_connections
     }
     if (Outbound.Urltest === raw.type) {
       if ('url' in raw) {
@@ -276,7 +345,7 @@ const restoreRouteRules = (
     const rule = Defaults.DefaultRouteRule()
 
     rule.id = 'rule-' + i
-    rule.action = raw.action
+    rule.action = raw.action || RuleAction.Route
 
     const hits = supportedRuleTypes.filter((key) => key in raw)
     if (hits.length === 1) {
@@ -312,7 +381,9 @@ const restoreRouteRules = (
         .filter((v) => v)
         .join(',')
     } else {
-      rule.payload = String(raw[rule.type])
+      rule.payload = Array.isArray(raw[rule.type])
+        ? raw[rule.type].join(',')
+        : String(raw[rule.type])
     }
 
     if (RuleAction.Route === raw.action) {
@@ -438,10 +509,9 @@ const restoreDnsRules = (
   DnsServersIds: Recordable,
 ): IDNSRule[] => {
   return rules.flatMap((raw: Recordable, i) => {
-    if (!raw.action) return []
     const rule = Defaults.DefaultDnsRule()
     rule.id = 'rule-' + i
-    rule.action = raw.action
+    rule.action = raw.action || RuleAction.Route
 
     const hits = supportedRuleTypes.filter((key) => key in raw)
     if (hits.length === 1) {
@@ -477,7 +547,9 @@ const restoreDnsRules = (
         .filter((v) => v)
         .join(',')
     } else {
-      rule.payload = raw[rule.type]
+      rule.payload = Array.isArray(raw[rule.type])
+        ? raw[rule.type].join(',')
+        : String(raw[rule.type])
     }
 
     if (RuleAction.Route === raw.action) {
@@ -498,6 +570,9 @@ const restoreDnsRules = (
           action: undefined,
           invert: undefined,
           disable_cache: undefined,
+          client_subnet: undefined,
+          strategy: undefined,
+          server: undefined,
           ...supportedRuleTypes.reduce((p, c) => ((p[c] = undefined), p), {} as Recordable),
         },
         null,

@@ -193,14 +193,17 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       return { id, tag, type }
     })
 
-    await WriteFile(s.path, JSON.stringify(_proxies, null, 2))
+    if (s.type === 'Http' || (s.type === 'File' && s.url !== s.path)) {
+      const proxies = omitArray(_proxies, ['__id__', '__tmp__id__'])
+      await WriteFile(s.path, JSON.stringify(proxies, null, 2))
+    }
 
     if (s.useInternal && config && !config.proxies) {
       // check !config.proxies to ensure it's likely a sing-box config, not clash
       // although restoreProfile might handle it, sing-box structure is expected.
       const profilesStore = useProfilesStore()
       const profile = profilesStore.getProfileById(s.id)
-      const _profile = restoreProfile(config, s.name, { subscriptionId: s.id })
+      const _profile = restoreProfile(config, s.name, { subscriptionIds: [s.id] })
 
       _profile.id = s.id
 

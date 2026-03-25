@@ -474,6 +474,7 @@ export default {
     outbounds: 'Outbounds',
     dnsServers: 'DNS Servers',
     dnsRules: 'DNS Rules',
+    editSourceFile: 'Edit Configuration (Source File)',
   },
   ruleset: {
     manual: 'MANUAL',
@@ -643,7 +644,7 @@ export default {
     needAdmin: 'Admin required',
     exitOnClose: 'Exit on window close',
     closeKernelOnExit: 'Stop core on exit',
-    autoSetSystemProxy: 'Auto Set / Clear System Proxy',
+    autoSetSystemProxy: 'Auto-configure System Proxy',
     proxyBypassList: 'Proxy Bypass List',
     proxyBypassListTips: 'Separate with semicolons',
     autoStartKernel: 'Start core on launch',
