@@ -52,24 +52,37 @@ const supportedRuleTypes = [
 ]
 
 const buildTagIdMapping = (prefix: string, arr?: Recordable[]): Recordable<string> => {
-  const p: Recordable<string> = {
+  const p: Recordable<string> = {}
+  
+  // First pass: scan and map standard sing-box built-in tags and their common variants
+  const isBuiltInType = (type: string) => ['direct', 'block'].includes(type?.toLowerCase())
+  const getStandardId = (type: string) => type?.toLowerCase() === 'direct' ? 'outbound-direct' : 'outbound-block'
+
+  if (arr) {
+    arr.forEach((c, i) => {
+      const lowerTag = c.tag?.toLowerCase()
+      if (isBuiltInType(c.type)) {
+        p[c.tag] = getStandardId(c.type)
+      } else if (['direct', 'block'].includes(lowerTag)) {
+        p[c.tag] = getStandardId(lowerTag)
+      } else {
+        p[c.tag] = prefix + i
+      }
+    })
+  }
+
+  // Ensure these always exist in the map even if not in the arr
+  const builtIns = {
     direct: 'outbound-direct',
+    Direct: 'outbound-direct',
     DIRECT: 'outbound-direct',
     block: 'outbound-block',
+    Block: 'outbound-block',
     BLOCK: 'outbound-block',
   }
-  if (!arr) return p
-  return arr.reduce((acc, c, i) => {
-    const lowerType = c.type?.toLowerCase()
-    if (lowerType === 'direct') {
-      acc[c.tag] = 'outbound-direct'
-    } else if (lowerType === 'block') {
-      acc[c.tag] = 'outbound-block'
-    } else {
-      acc[c.tag] = prefix + i
-    }
-    return acc
-  }, p)
+  Object.assign(p, builtIns)
+  
+  return p
 }
 
 type RestoreProfileOptions = {
