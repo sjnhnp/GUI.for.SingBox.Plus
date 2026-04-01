@@ -85,8 +85,8 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
 
     if (!runtimeProfile) {
       const txt = await ReadFile(CoreConfigFilePath)
-      runtimeProfile = restoreProfile(JSON.parse(txt))
       const profile = profilesStore.currentProfile
+      runtimeProfile = restoreProfile(JSON.parse(txt), undefined, { profile })
       if (profile) {
         const _profile = deepClone(profile)
         _profile.inbounds.forEach((inbound) => {

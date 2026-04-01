@@ -203,14 +203,13 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       // although restoreProfile might handle it, sing-box structure is expected.
       const profilesStore = useProfilesStore()
       const profile = profilesStore.getProfileById(s.id)
-      const _profile = restoreProfile(config, s.name, { subscriptionIds: [s.id] })
+      const _profile = restoreProfile(config, s.name, { subscriptionIds: [s.id], profile })
 
       _profile.id = s.id
 
       if (profile) {
         _profile.name = profile.name // Keep user-defined name
-        // Keep other specific user configs if needed, e.g. mixin/script? 
-        // For now, simple overwrite except name is safer for "Sync" behavior.
+        // Deep inheritance of UI metadata handled by internal restorer logic now that profile is passed
         profilesStore.editProfile(s.id, _profile)
       } else {
         _profile.name = s.name
