@@ -20,7 +20,7 @@ const { t } = i18n.global
 
 const DefaultOutboundIds = {
   Select: 'outbound-select',
-  Urltest: 'outbound-urlte',
+  Urltest: 'outbound-urltest',
   Direct: 'outbound-direct',
   Block: 'outbound-block',
   Fallback: 'outbound-fallback',
@@ -150,6 +150,8 @@ export const DefaultOutbound = (): IOutbound => ({
   tolerance: 150,
   include: '',
   exclude: '',
+  icon: '',
+  hidden: false,
 })
 
 export const DefaultOutbounds = (): IOutbound[] => [
@@ -164,6 +166,8 @@ export const DefaultOutbounds = (): IOutbound[] => [
     tolerance: 150,
     include: '',
     exclude: '',
+    icon: '',
+    hidden: false,
   },
   {
     id: DefaultOutboundIds.Urltest,
@@ -176,6 +180,8 @@ export const DefaultOutbounds = (): IOutbound[] => [
     tolerance: 150,
     include: '',
     exclude: '',
+    icon: '',
+    hidden: false,
   },
   {
     id: DefaultOutboundIds.Direct,
@@ -191,6 +197,8 @@ export const DefaultOutbounds = (): IOutbound[] => [
     tolerance: 150,
     include: '',
     exclude: '',
+    icon: '',
+    hidden: false,
   },
   {
     id: DefaultOutboundIds.Block,
@@ -206,6 +214,8 @@ export const DefaultOutbounds = (): IOutbound[] => [
     tolerance: 150,
     include: '',
     exclude: '',
+    icon: '',
+    hidden: false,
   },
   {
     id: DefaultOutboundIds.Fallback,
@@ -221,6 +231,8 @@ export const DefaultOutbounds = (): IOutbound[] => [
     tolerance: 150,
     include: '',
     exclude: '',
+    icon: '',
+    hidden: false,
   },
   {
     id: DefaultOutboundIds.Global,
@@ -239,6 +251,8 @@ export const DefaultOutbounds = (): IOutbound[] => [
     tolerance: 150,
     include: '',
     exclude: '',
+    icon: '',
+    hidden: false,
   },
 ]
 

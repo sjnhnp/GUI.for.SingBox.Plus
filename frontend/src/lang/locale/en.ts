@@ -141,6 +141,8 @@ export default {
       subscriptions: 'Subscriptions',
       include: 'Include',
       exclude: 'Exclude',
+      icon: 'Icon',
+      hidden: 'Hidden',
     },
     route: {
       tab: {
@@ -713,7 +715,6 @@ export default {
     restart: 'Restart APP',
     noDownloadLink: 'No download link found',
     updateSuccessfulRestart: 'Update completed, please restart the App',
-    updateSuccessfulReplace: 'Download completed, please manually replace the App',
     updateSuccessful: 'Update completed',
     newVersion: 'New version found',
     latestVersion: 'Already the latest version',
