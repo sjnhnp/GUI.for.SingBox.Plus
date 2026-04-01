@@ -53,7 +53,14 @@ const supportedRuleTypes = [
 
 const buildTagIdMapping = (prefix: string, arr?: Recordable[]): Recordable<string> => {
   if (!arr) return {}
-  return arr.reduce((p, c, i) => ((p[c.tag] = prefix + i), p), {})
+  return arr.reduce((p, c, i) => {
+    if (['direct', 'block'].includes(c.type)) {
+      p[c.tag] = c.type
+    } else {
+      p[c.tag] = prefix + i
+    }
+    return p
+  }, {})
 }
 
 type RestoreProfileOptions = {
@@ -209,7 +216,9 @@ const restoreOutbounds = (
   })
 
   return outbounds.flatMap((raw) => {
-    if (![Outbound.Selector, Outbound.Urltest].includes(raw.type)) {
+    if (
+      ![Outbound.Selector, Outbound.Urltest, Outbound.Direct, Outbound.Block].includes(raw.type)
+    ) {
       return []
     }
     const outbound = Defaults.DefaultOutbound()
@@ -220,9 +229,9 @@ const restoreOutbounds = (
     let newOutbounds: IProxy[] = []
 
     raw.outbounds?.forEach((tag: string) => {
-      const isBuiltIn = [Outbound.Direct, Outbound.Block].includes(tag as Outbound)
+      const isBuiltIn = [Outbound.Direct, Outbound.Block].includes(tag.toLowerCase() as Outbound)
       if (isBuiltIn) {
-        newOutbounds.push({ id: tag, type: 'Built-in', tag })
+        newOutbounds.push({ id: tag.toLowerCase(), type: 'Built-in', tag })
       } else if (groupTags.has(tag)) {
         const id = OutboundsIds[tag]
         if (id) {
@@ -240,6 +249,12 @@ const restoreOutbounds = (
     if (originalGroup) {
       outbound.include = originalGroup.include
       outbound.exclude = originalGroup.exclude
+      outbound.icon = originalGroup.icon
+      outbound.hidden = originalGroup.hidden
+      outbound.interrupt_exist_connections = originalGroup.interrupt_exist_connections
+      outbound.url = originalGroup.url
+      outbound.interval = originalGroup.interval
+      outbound.tolerance = originalGroup.tolerance
 
       const currentNonBuiltInIds = new Set(
         newOutbounds.filter((v) => v.type !== 'Built-in').map((v) => v.id),
@@ -270,18 +285,20 @@ const restoreOutbounds = (
 
     outbound.outbounds = newOutbounds
 
-    if ('interrupt_exist_connections' in raw) {
-      outbound.interrupt_exist_connections = raw.interrupt_exist_connections
-    }
-    if (Outbound.Urltest === raw.type) {
-      if ('url' in raw) {
-        outbound.url = raw.url
+    if (!originalGroup) {
+      if ('interrupt_exist_connections' in raw) {
+        outbound.interrupt_exist_connections = raw.interrupt_exist_connections
       }
-      if ('interval' in raw) {
-        outbound.interval = raw.interval
-      }
-      if ('tolerance' in raw) {
-        outbound.tolerance = raw.tolerance
+      if (Outbound.Urltest === raw.type) {
+        if ('url' in raw) {
+          outbound.url = raw.url
+        }
+        if ('interval' in raw) {
+          outbound.interval = raw.interval
+        }
+        if ('tolerance' in raw) {
+          outbound.tolerance = raw.tolerance
+        }
       }
     }
     return outbound
