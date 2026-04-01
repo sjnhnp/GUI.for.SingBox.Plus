@@ -29,7 +29,7 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
   const res: any = {}
 
   if (invert) res.invert = true
-  if (action && action !== RuleAction.Route) {
+  if (action && (action !== RuleAction.Route || (rule as any)._isDns)) {
     res.action = action
   }
 
@@ -66,7 +66,7 @@ const _generateRule = (rule: IRule | IDNSRule, rule_set: IRuleSet[], inbounds: I
         }
         return val
       })
-    res[type] = vals.length === 1 ? vals[0] : vals
+    res[type] = vals
   }
 
   return res
@@ -349,7 +349,7 @@ const generateDns = (
       if (rule.type === RuleType.InsertionPoint || !rule.enable) {
         return []
       }
-      const extra: Recordable = _generateRule(rule, rule_set, inbounds)
+      const extra: Recordable = _generateRule({ ...rule, _isDns: true } as any, rule_set, inbounds)
       if (rule.type === RuleType.Inline && rule.payload.includes('__is_fake_ip')) {
         if (!dns.servers.find((v) => v.type === DnsServer.FakeIP)) {
           return []
