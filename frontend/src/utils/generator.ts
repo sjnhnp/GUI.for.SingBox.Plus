@@ -135,7 +135,7 @@ const cleanOutbound = (outbound: any) => {
 const generateOutbounds = async (outbounds: IOutbound[]) => {
   const result: Recordable[] = []
   const SubscriptionCache: Recordable<any[]> = {}
-  const proxiesSet = new Set<any>()
+  const proxiesMap = new Map<string, any>()
   const builtInProxiesSet = new Set<string>()
 
   const subscribesStore = useSubscribesStore()
@@ -178,12 +178,16 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
             _outbound.outbounds.push(
               ...SubscriptionCache[subId]!.map((v) => v.tag).filter((tag) => isTagMatching(tag)),
             )
-            SubscriptionCache[subId]!.forEach((v) => proxiesSet.add(cleanOutbound({ ...v })))
+            SubscriptionCache[subId]!.forEach((v) => {
+              if (isTagMatching(v.tag)) {
+                proxiesMap.set(v.tag, cleanOutbound({ ...v }))
+              }
+            })
           } else {
             const _proxy = SubscriptionCache[subId]!.find((v) => v.tag === proxy.tag)
             if (_proxy && isTagMatching(_proxy.tag)) {
               _outbound.outbounds.push(_proxy.tag)
-              proxiesSet.add(cleanOutbound({ ..._proxy }))
+              proxiesMap.set(_proxy.tag, cleanOutbound({ ..._proxy }))
             }
           }
         }
@@ -202,7 +206,7 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
     result.push(_outbound)
   }
 
-  result.push(...Array.from(proxiesSet))
+  result.push(...Array.from(proxiesMap.values()))
   result.push(...Array.from(builtInProxiesSet).map((v) => ({ type: v, tag: v })))
 
   return result
