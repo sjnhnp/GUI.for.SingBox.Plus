@@ -52,17 +52,24 @@ const supportedRuleTypes = [
 ]
 
 const buildTagIdMapping = (prefix: string, arr?: Recordable[]): Recordable<string> => {
-  if (!arr) return {}
-  return arr.reduce((p, c, i) => {
-    if (c.type === 'direct') {
-      p[c.tag] = 'outbound-direct'
-    } else if (c.type === 'block') {
-      p[c.tag] = 'outbound-block'
+  const p: Recordable<string> = {
+    direct: 'outbound-direct',
+    DIRECT: 'outbound-direct',
+    block: 'outbound-block',
+    BLOCK: 'outbound-block',
+  }
+  if (!arr) return p
+  return arr.reduce((acc, c, i) => {
+    const lowerType = c.type?.toLowerCase()
+    if (lowerType === 'direct') {
+      acc[c.tag] = 'outbound-direct'
+    } else if (lowerType === 'block') {
+      acc[c.tag] = 'outbound-block'
     } else {
-      p[c.tag] = prefix + i
+      acc[c.tag] = prefix + i
     }
-    return p
-  }, {})
+    return acc
+  }, p)
 }
 
 type RestoreProfileOptions = {
@@ -413,7 +420,15 @@ const restoreRouteRules = (
     }
 
     if (RuleAction.Route === action) {
-      rule.outbound = OutboundsIds[raw.outbound]
+      const tag = raw.outbound
+      let id = OutboundsIds[tag]
+      if (!id) {
+        // Fallback for missing built-in mappings
+        const lowerTag = tag?.toLowerCase()
+        if (lowerTag === 'direct') id = 'outbound-direct'
+        else if (lowerTag === 'block') id = 'outbound-block'
+      }
+      rule.outbound = id
     } else if (RuleAction.Reject === action) {
       if ('method' in raw) {
         rule.outbound = raw.method
