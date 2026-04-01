@@ -113,6 +113,24 @@ const generateInbounds = (inbounds: IInbound[]) => {
   })
 }
 
+const cleanOutbound = (outbound: any) => {
+  const {
+    id,
+    include,
+    exclude,
+    icon,
+    subscription,
+    enable,
+    last_status,
+    outbounds,
+    ..._outbound
+  } = outbound
+  if (outbounds) {
+    _outbound.outbounds = outbounds
+  }
+  return _outbound
+}
+
 const generateOutbounds = async (outbounds: IOutbound[]) => {
   const result: Recordable[] = []
   const SubscriptionCache: Recordable<any[]> = {}
@@ -122,7 +140,7 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
   const subscribesStore = useSubscribesStore()
 
   for (const outbound of outbounds) {
-    const { id, include, exclude, outbounds: _, ..._outbound } = { ...outbound } as any
+    const _outbound = cleanOutbound({ ...outbound }) as any
     if (outbound.type === Outbound.Selector || outbound.type === Outbound.Urltest) {
       if (outbound.type === Outbound.Selector) {
         delete _outbound.url
@@ -159,12 +177,12 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
             _outbound.outbounds.push(
               ...SubscriptionCache[subId]!.map((v) => v.tag).filter((tag) => isTagMatching(tag)),
             )
-            SubscriptionCache[subId]!.forEach((v) => proxiesSet.add(v))
+            SubscriptionCache[subId]!.forEach((v) => proxiesSet.add(cleanOutbound({ ...v })))
           } else {
             const _proxy = SubscriptionCache[subId]!.find((v) => v.tag === proxy.tag)
             if (_proxy && isTagMatching(_proxy.tag)) {
               _outbound.outbounds.push(_proxy.tag)
-              proxiesSet.add(_proxy)
+              proxiesSet.add(cleanOutbound({ ..._proxy }))
             }
           }
         }
