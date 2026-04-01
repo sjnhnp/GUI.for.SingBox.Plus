@@ -10,6 +10,16 @@ on:
         description: 'Version tag (e.g. v1.17.1). Leave empty to auto-increment patch version.'
         required: false
         default: ''
+      platform:
+        description: 'Build platform'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - windows
+          - macos
+          - linux
 
 permissions:
   contents: write
@@ -76,6 +86,7 @@ jobs:
 
   Build-Windows:
     needs: Build-Frontend
+    if: github.event_name == 'push' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows'
     runs-on: windows-latest
     env:
       APP_NAME: GFS Plus
@@ -143,6 +154,7 @@ jobs:
 
   Build-macOS:
     needs: Build-Frontend
+    if: github.event_name == 'push' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'macos'
     runs-on: macos-latest
     env:
       APP_NAME: GFS Plus
@@ -206,6 +218,7 @@ jobs:
 
   Build-Linux:
     needs: Build-Frontend
+    if: github.event_name == 'push' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux'
     runs-on: ubuntu-latest
     env:
       APP_NAME: GFS Plus
@@ -270,6 +283,14 @@ jobs:
 
   Release:
     needs: [Build-Windows, Build-macOS, Build-Linux]
+    if: |
+      always() && 
+      !cancelled() && 
+      !failure() && 
+      (needs.Build-Windows.result == 'success' || needs.Build-Windows.result == 'skipped') &&
+      (needs.Build-macOS.result == 'success' || needs.Build-macOS.result == 'skipped') &&
+      (needs.Build-Linux.result == 'success' || needs.Build-Linux.result == 'skipped') &&
+      (needs.Build-Windows.result == 'success' || needs.Build-macOS.result == 'success' || needs.Build-Linux.result == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

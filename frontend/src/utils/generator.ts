@@ -119,6 +119,7 @@ const cleanOutbound = (outbound: any) => {
     include,
     exclude,
     icon,
+    hidden,
     subscription,
     enable,
     last_status,
