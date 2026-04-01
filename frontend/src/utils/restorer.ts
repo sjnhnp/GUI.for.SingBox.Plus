@@ -54,8 +54,10 @@ const supportedRuleTypes = [
 const buildTagIdMapping = (prefix: string, arr?: Recordable[]): Recordable<string> => {
   if (!arr) return {}
   return arr.reduce((p, c, i) => {
-    if (['direct', 'block'].includes(c.type)) {
-      p[c.tag] = c.type
+    if (c.type === 'direct') {
+      p[c.tag] = 'outbound-direct'
+    } else if (c.type === 'block') {
+      p[c.tag] = 'outbound-block'
     } else {
       p[c.tag] = prefix + i
     }
@@ -229,9 +231,15 @@ const restoreOutbounds = (
     let newOutbounds: IProxy[] = []
 
     raw.outbounds?.forEach((tag: string) => {
-      const isBuiltIn = [Outbound.Direct, Outbound.Block].includes(tag.toLowerCase() as Outbound)
-      if (isBuiltIn) {
-        newOutbounds.push({ id: tag.toLowerCase(), type: 'Built-in', tag })
+      const lowerTag = tag.toLowerCase()
+      const isDirect = lowerTag === 'direct'
+      const isBlock = lowerTag === 'block'
+      if (isDirect || isBlock) {
+        newOutbounds.push({
+          id: isDirect ? 'outbound-direct' : 'outbound-block',
+          type: 'Built-in',
+          tag,
+        })
       } else if (groupTags.has(tag)) {
         const id = OutboundsIds[tag]
         if (id) {

@@ -152,8 +152,10 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
       const isTagMatching = createTextMatcher(outbound.include, outbound.exclude)
       for (const proxy of outbound.outbounds) {
         if (proxy.type === 'Built-in') {
-          if ([Outbound.Direct, Outbound.Block].includes(proxy.id.toLowerCase() as Outbound)) {
-            builtInProxiesMap.set(proxy.id.toLowerCase(), proxy.tag)
+          const isDirect = proxy.id === 'outbound-direct'
+          const isBlock = proxy.id === 'outbound-block'
+          if (isDirect || isBlock) {
+            builtInProxiesMap.set(isDirect ? Outbound.Direct : Outbound.Block, proxy.tag)
           }
           _outbound.outbounds.push(proxy.tag)
         } else {
