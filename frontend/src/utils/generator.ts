@@ -141,6 +141,12 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
   const subscribesStore = useSubscribesStore()
 
   for (const outbound of outbounds) {
+    if (outbound.type === 'proxy') {
+      if (outbound.config) {
+        proxiesMap.set(outbound.tag, cleanOutbound({ ...outbound.config }))
+      }
+      continue
+    }
     const _outbound = cleanOutbound({ ...outbound }) as any
     if (outbound.type === Outbound.Selector || outbound.type === Outbound.Urltest) {
       if (outbound.type === Outbound.Selector) {
@@ -209,9 +215,13 @@ const generateOutbounds = async (outbounds: IOutbound[]) => {
   }
 
   result.push(...Array.from(proxiesMap.values()))
-  result.push(
-    ...Array.from(builtInProxiesMap.entries()).map(([type, tag]) => ({ type, tag })),
-  )
+
+  const existingTags = new Set(result.map((o) => o.tag))
+  for (const [type, tag] of builtInProxiesMap.entries()) {
+    if (!existingTags.has(tag)) {
+      result.push({ type, tag })
+    }
+  }
 
   return result
 }

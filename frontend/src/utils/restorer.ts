@@ -353,6 +353,21 @@ const restoreOutbounds = (
     result.push(blockOutbound)
   }
 
+  outbounds.forEach((raw) => {
+    if (
+      [Outbound.Selector, Outbound.Urltest, Outbound.Direct, Outbound.Block].includes(raw.type)
+    ) {
+      return
+    }
+    const proxyOutbound = Defaults.DefaultOutbound()
+    proxyOutbound.id = OutboundsIds[raw.tag]
+    proxyOutbound.tag = raw.tag
+    proxyOutbound.type = 'proxy' as any
+    proxyOutbound.outbounds = []
+    proxyOutbound.config = raw
+    result.push(proxyOutbound)
+  })
+
   return result
 }
 

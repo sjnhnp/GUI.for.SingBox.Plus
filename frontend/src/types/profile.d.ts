@@ -102,7 +102,7 @@ interface IInbound {
   stack?: TunStack
 }
 
-type OutboundType = 'direct' | 'block' | 'selector' | 'urltest'
+type OutboundType = 'direct' | 'block' | 'selector' | 'urltest' | 'proxy'
 
 type RuleAction = 'route' | 'route-options' | 'reject' | 'hijack-dns' | 'sniff' | 'resolve'
 type DnsRuleAction = 'route' | 'route-options' | 'reject' | 'predefined'
@@ -121,6 +121,8 @@ interface IOutbound {
   exclude: string
   icon: string
   hidden: boolean
+  // proxy type
+  config?: Recordable
 }
 
 type RuleType =
