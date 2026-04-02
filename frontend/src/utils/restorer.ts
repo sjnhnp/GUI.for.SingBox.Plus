@@ -237,7 +237,7 @@ const restoreOutbounds = (
     originalOutboundMap.set(outbound.tag, outbound)
   })
 
-  return outbounds.flatMap((raw) => {
+  const result = outbounds.flatMap((raw) => {
     if (
       ![Outbound.Selector, Outbound.Urltest, Outbound.Direct, Outbound.Block].includes(raw.type)
     ) {
@@ -331,6 +331,29 @@ const restoreOutbounds = (
     }
     return outbound
   })
+
+  const hasDirect = result.some((o) => o.id === 'outbound-direct')
+  const hasBlock = result.some((o) => o.id === 'outbound-block')
+
+  if (!hasDirect) {
+    const directOutbound = Defaults.DefaultOutbound()
+    directOutbound.id = 'outbound-direct'
+    directOutbound.tag = 'direct'
+    directOutbound.type = Outbound.Direct
+    directOutbound.outbounds = []
+    result.push(directOutbound)
+  }
+
+  if (!hasBlock) {
+    const blockOutbound = Defaults.DefaultOutbound()
+    blockOutbound.id = 'outbound-block'
+    blockOutbound.tag = 'block'
+    blockOutbound.type = Outbound.Block
+    blockOutbound.outbounds = []
+    result.push(blockOutbound)
+  }
+
+  return result
 }
 
 const restoreRouteRuleset = (
