@@ -275,6 +275,8 @@ const restoreOutbounds = (
 
     const originalGroup = originalOutboundMap.get(outbound.tag)
     if (originalGroup) {
+      outbound.icon = originalGroup.icon
+      outbound.hidden = originalGroup.hidden
       outbound.include = originalGroup.include
       outbound.exclude = originalGroup.exclude
       outbound.icon = originalGroup.icon
