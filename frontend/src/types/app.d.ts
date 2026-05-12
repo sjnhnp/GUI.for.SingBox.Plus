@@ -9,6 +9,7 @@ import type {
   WebviewGpuPolicy,
   Branch,
   ControllerCloseMode,
+  RequestProxyMode,
   PluginTrigger,
   ScheduledTasksType,
   RequestMethod,
@@ -46,6 +47,7 @@ export interface MenuItem {
   children?: MenuItem[]
   hidden?: boolean
   checked?: boolean
+  checkable?: boolean
 }
 
 export interface AppSettings {
@@ -68,6 +70,8 @@ export interface AppSettings {
   exitOnClose: boolean
   closeKernelOnExit: boolean
   autoSetSystemProxy: boolean
+  requestProxyMode: RequestProxyMode
+  customProxy: string
   proxyBypassList: string
   autoStartKernel: boolean
   autoRestartKernel: boolean
@@ -99,6 +103,9 @@ export interface AppSettings {
       env: Recordable
       args: string[]
     }
+  }
+  plugins: {
+    sources: { enable: boolean; name: string; url: string }[]
   }
   pluginSettings: Record<string, Record<string, any>>
   githubApiToken: string
@@ -146,6 +153,7 @@ export interface Plugin {
   triggers: PluginTrigger[]
   tags: string[]
   hasUI: boolean
+  group: string
   menus: Record<string, string>
   context: {
     profiles: Recordable

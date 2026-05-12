@@ -3,6 +3,7 @@ package bridge
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	sysruntime "runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +23,7 @@ import (
 func (a *App) Exec(path string, args []string, options ExecOptions) FlagResult {
 	log.Printf("Exec: %s %s %v", path, args, options)
 
-	exePath := GetPath(path)
+	exePath := resolvePath(path)
 
 	if _, err := os.Stat(exePath); os.IsNotExist(err) {
 		exePath = path
@@ -41,7 +43,7 @@ func (a *App) Exec(path string, args []string, options ExecOptions) FlagResult {
 
 	var output string
 	if options.Convert {
-		output = strings.TrimSpace(ConvertByte2String(out))
+		output = strings.TrimSpace(decodeGB18030(out))
 	} else {
 		output = strings.TrimSpace(string(out))
 	}
@@ -59,17 +61,19 @@ func (a *App) Exec(path string, args []string, options ExecOptions) FlagResult {
 func (a *App) ExecBackground(path string, args []string, outEvent string, endEvent string, options ExecOptions) FlagResult {
 	log.Printf("ExecBackground: %s %s %s %s %v", path, args, outEvent, endEvent, options)
 
-	exePath := GetPath(path)
+	exePath := resolvePath(path)
 	pidPath := ""
+	logPath := ""
 
 	if _, err := os.Stat(exePath); os.IsNotExist(err) {
 		exePath = path
 	}
 
 	if options.PidFile != "" {
-		pidPath = GetPath(options.PidFile)
+		pidPath = resolvePath(options.PidFile)
 	}
 
+	done := make(chan struct{})
 	cmd := exec.Command(exePath, args...)
 	SetCmdWindowHidden(cmd)
 
@@ -80,12 +84,33 @@ func (a *App) ExecBackground(path string, args []string, outEvent string, endEve
 		cmd.Env = append(cmd.Env, key+"="+value)
 	}
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return FlagResult{false, err.Error()}
-	}
+	var stdout io.ReadCloser
+	var err error
+	var logFile *os.File
 
-	cmd.Stderr = cmd.Stdout
+	switch {
+	case options.LogFile != "":
+		logPath = resolvePath(options.LogFile)
+		if err := os.MkdirAll(filepath.Dir(logPath), os.ModePerm); err != nil {
+			return FlagResult{false, err.Error()}
+		}
+
+		logFile, err = os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			return FlagResult{false, err.Error()}
+		}
+		defer logFile.Close()
+
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
+
+	case outEvent != "":
+		stdout, err = cmd.StdoutPipe()
+		if err != nil {
+			return FlagResult{false, err.Error()}
+		}
+		cmd.Stderr = cmd.Stdout
+	}
 
 	if err := cmd.Start(); err != nil {
 		return FlagResult{false, err.Error()}
@@ -94,48 +119,59 @@ func (a *App) ExecBackground(path string, args []string, outEvent string, endEve
 	pid := strconv.Itoa(cmd.Process.Pid)
 
 	if pidPath != "" {
-		err := os.WriteFile(pidPath, []byte(pid), os.ModePerm)
-		if err != nil {
+		if err := os.WriteFile(pidPath, []byte(pid), os.ModePerm); err != nil {
 			_ = SendExitSignal(cmd.Process)
 			_ = waitForProcessExitWithTimeout(cmd.Process, 10)
+			_ = cmd.Wait()
 			return FlagResult{false, err.Error()}
 		}
 	}
 
 	if outEvent != "" {
-		scanAndEmit := func(reader io.Reader) {
-			scanner := bufio.NewScanner(reader)
-			stopOutput := false
-			for scanner.Scan() {
-				var text string
-				if options.Convert {
-					text = ConvertByte2String(scanner.Bytes())
-				} else {
-					text = scanner.Text()
-				}
+		if logPath != "" {
+			go tailAndEmitLogFile(a, logPath, outEvent, options, done)
+		} else {
+			scanAndEmit := func(reader io.Reader) {
+				scanner := bufio.NewScanner(reader)
+				scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+				stopOutput := false
+				for scanner.Scan() {
+					var text string
+					if options.Convert {
+						text = decodeGB18030(scanner.Bytes())
+					} else {
+						text = scanner.Text()
+					}
 
-				if !stopOutput {
-					runtime.EventsEmit(a.Ctx, outEvent, text)
+					if !stopOutput {
+						runtime.EventsEmit(a.Ctx, outEvent, text)
 
-					if options.StopOutputKeyword != "" && strings.Contains(text, options.StopOutputKeyword) {
-						stopOutput = true
+						if options.StopOutputKeyword != "" && strings.Contains(text, options.StopOutputKeyword) {
+							stopOutput = true
+						}
 					}
 				}
 			}
-		}
 
-		go scanAndEmit(stdout)
+			go scanAndEmit(stdout)
+		}
 	}
 
-	if endEvent != "" {
-		go func() {
-			cmd.Wait()
-			if pidPath != "" {
-				_ = os.Remove(pidPath)
+	go func() {
+		defer close(done)
+
+		err := cmd.Wait()
+		if pidPath != "" {
+			_ = os.Remove(pidPath)
+		}
+		if endEvent != "" {
+			if err != nil {
+				runtime.EventsEmit(a.Ctx, endEvent, err.Error())
+				return
 			}
 			runtime.EventsEmit(a.Ctx, endEvent)
-		}()
-	}
+		}
+	}()
 
 	return FlagResult{true, pid}
 }
@@ -275,4 +311,104 @@ func getDarwinProcessRSS(pid int32) (uint64, error) {
 	}
 
 	return rss * 1024, nil
+}
+
+func tailAndEmitLogFile(a *App, path string, outEvent string, options ExecOptions, done <-chan struct{}) {
+	offset := int64(0)
+	pending := ""
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	emitLine := func(text string) bool {
+		if options.Convert {
+			text = decodeGB18030([]byte(text))
+		}
+		text = strings.TrimRight(text, "\r")
+
+		if text == "" {
+			return false
+		}
+
+		runtime.EventsEmit(a.Ctx, outEvent, text)
+		return options.StopOutputKeyword != "" && strings.Contains(text, options.StopOutputKeyword)
+	}
+
+	readNewContent := func(flush bool) bool {
+		data, nextOffset, err := readFileRange(path, offset)
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				log.Printf("Failed to read log file %s: %v", path, err)
+			}
+			return false
+		}
+
+		if len(data) == 0 {
+			if flush && pending != "" {
+				return emitLine(pending)
+			}
+			offset = nextOffset
+			return false
+		}
+
+		offset = nextOffset
+		chunk := pending + string(data)
+		lines := strings.Split(chunk, "\n")
+		pending = lines[len(lines)-1]
+
+		if slices.ContainsFunc(lines[:len(lines)-1], emitLine) {
+			pending = ""
+			return true
+		}
+
+		if flush && pending != "" {
+			if emitLine(pending) {
+				pending = ""
+				return true
+			}
+			pending = ""
+		}
+
+		return false
+	}
+
+	for {
+		select {
+		case <-done:
+			_ = readNewContent(true)
+			return
+		case <-ticker.C:
+			if readNewContent(false) {
+				return
+			}
+		}
+	}
+}
+
+func readFileRange(path string, offset int64) ([]byte, int64, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, offset, err
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, offset, err
+	}
+
+	size := stat.Size()
+	if offset > size {
+		offset = size
+	}
+	if size == offset {
+		return nil, offset, nil
+	}
+
+	buf := make([]byte, size-offset)
+	n, err := file.ReadAt(buf, offset)
+	if err != nil && err != io.EOF {
+		return nil, offset, err
+	}
+
+	return buf[:n], offset + int64(n), nil
 }

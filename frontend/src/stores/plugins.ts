@@ -2,9 +2,9 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { parse } from 'yaml'
 
-import { HttpGet, ReadFile, RemoveFile, WriteFile } from '@/bridge'
+import { HttpGet, ReadFile, RemoveFile, Requests, WriteFile } from '@/bridge'
 import { PluginHubFilePath, PluginsFilePath } from '@/constant/app'
-import { PluginTrigger, PluginTriggerEvent } from '@/enums/app'
+import { PluginTrigger, PluginTriggerEvent, RequestMethod } from '@/enums/app'
 import { useAppSettingsStore } from '@/stores'
 import {
   ignoredError,
@@ -594,7 +594,10 @@ export const usePluginsStore = defineStore('plugins', () => {
     }
 
     if (nextPlugin.type === 'Http') {
-      const { body } = await HttpGet(nextPlugin.url)
+      const { status, body } = await HttpGet(nextPlugin.url)
+      if (status !== 200) {
+        throw new Error(`Failed to fetch plugin code from ${nextPlugin.url}. Status: ${status}`)
+      }
       code = body
     }
 
@@ -662,28 +665,41 @@ export const usePluginsStore = defineStore('plugins', () => {
   }
   const updatePluginHub = async () => {
     pluginHubLoading.value = true
-    try {
-      const { body: body1 } = await HttpGet<string>(
-        getAcceleratedUrl('https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/generic.json'),
-      )
-      const { body: body2 } = await HttpGet<string>(
-        getAcceleratedUrl('https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/gfs.json'),
-      )
-      // Load custom plugin repository (optional, won't block if failed)
-      let customPlugins: any[] = []
-      try {
-        const { body: body3 } = await HttpGet<string>(
-          getAcceleratedUrl('https://raw.githubusercontent.com/sjnhnp/gfc/main/plugins/custom.json'),
-        )
-        customPlugins = JSON.parse(body3)
-      } catch (err) {
-        console.warn('Failed to load custom plugin repository:', err)
+    const promises = appSettingsStore.app.plugins.sources.flatMap((source) => {
+      if (!source.enable) return []
+      return Requests<string>({
+        url: getAcceleratedUrl(source.url),
+        method: RequestMethod.Get,
+        autoTransformBody: false,
+      })
+    })
+    const results = await Promise.allSettled(promises)
+
+    pluginHub.value = results.reduce((acc, result) => {
+      if (result.status === 'fulfilled') {
+        try {
+          const plugins = JSON.parse(result.value.body) as Plugin[]
+          acc.push(...plugins)
+        } catch (error) {
+          console.error('Failed to parse plugin list from source. Reason: ', error)
+        }
       }
-      pluginHub.value = [...JSON.parse(body1), ...JSON.parse(body2), ...customPlugins]
-      await WriteFile(PluginHubFilePath, JSON.stringify(pluginHub.value))
-    } finally {
-      pluginHubLoading.value = false
+      return acc
+    }, [] as Plugin[])
+
+    // Load custom plugin repository (optional, won't block if failed)
+    try {
+      const { body: customBody } = await HttpGet<string>(
+        getAcceleratedUrl('https://raw.githubusercontent.com/sjnhnp/gfc/main/plugins/custom.json'),
+      )
+      const customPlugins = JSON.parse(customBody)
+      pluginHub.value.push(...customPlugins)
+    } catch (err) {
+      console.warn('Failed to load custom plugin repository:', err)
     }
+
+    await WriteFile(PluginHubFilePath, JSON.stringify(pluginHub.value))
+    pluginHubLoading.value = false
   }
 
   const getPluginById = (id: string) => plugins.value.find((v) => v.id === id)
