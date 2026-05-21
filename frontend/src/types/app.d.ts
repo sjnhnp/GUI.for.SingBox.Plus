@@ -64,7 +64,7 @@ export interface AppSettings {
   scheduledtasksView: View
   windowStartState: WindowStartState
   webviewGpuPolicy: WebviewGpuPolicy
-  contentProtection: true
+  contentProtection: boolean
   width: number
   height: number
   exitOnClose: boolean
@@ -118,6 +118,7 @@ export interface AppSettings {
   debugNoAnimation: boolean
   debugNoRounded: false
   debugBorder: boolean
+  debugUsePointer: boolean
   pages: string[]
 }
 
