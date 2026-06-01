@@ -137,6 +137,18 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     config.value['interface-name'] = runtimeProfile.route.default_interface
   }
 
+  const resetConfig = () => {
+    config.value.port = 0
+    config.value['socks-port'] = 0
+    config.value['mixed-port'] = 0
+    config.value['interface-name'] = ''
+    config.value['allow-lan'] = false
+    config.value.mode = ''
+    config.value.tun.enable = false
+    config.value.tun.stack = ''
+    config.value.tun.device = ''
+  }
+
   const updateConfig = async (field: string, value: any) => {
     if (field === 'mode') {
       await setConfigs({ mode: value })
@@ -315,6 +327,9 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     if (envStore.systemProxy) {
       await envStore.clearSystemProxy()
     }
+
+    resetConfig()
+
     await pluginsStore.onCoreStoppedTrigger()
 
     coreStoppedResolver(null)
