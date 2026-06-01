@@ -75,8 +75,6 @@ const githubProxySelect = computed({
     </div>
     <div class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">
-    <div class="px-8 py-12 flex items-center justify-between">
-      <div class="text-16 font-bold">
         {{ $t('settings.githubProxy.name') }}
         <span class="font-normal text-12">({{ $t('settings.githubProxy.tips') }})</span>
       </div>
