@@ -737,6 +737,12 @@ export default {
       name: 'GitHub Accelerate Download',
       tips: 'Used to accelerate core download, leave empty to direct connect',
     },
+    githubDownloadAcceleration: {
+      name: 'GitHub Download Acceleration',
+      tips: 'Accelerates GitHub resources',
+      mirror: 'GitHub Mirror',
+      reset: 'Reset mirror',
+    },
   },
   about: {
     new: 'New',

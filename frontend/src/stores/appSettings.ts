@@ -101,6 +101,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     pluginSettings: {},
     githubApiToken: '',
     githubProxy: '',
+    githubDownloadAcceleration: false,
+    githubDownloadMirror: '',
     multipleInstance: false,
     addPluginToMenu: false,
     addGroupToMenu: false,
@@ -140,6 +142,15 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     }
     if (settings.customProxy === undefined) {
       settings.customProxy = ''
+    }
+    if (settings.githubDownloadAcceleration === undefined) {
+      settings.githubDownloadAcceleration = false
+    }
+    if (settings.githubDownloadMirror === undefined) {
+      settings.githubDownloadMirror = ''
+    }
+    if (settings.githubProxy === undefined) {
+      settings.githubProxy = ''
     }
     if (!settings.plugins) {
       settings.plugins = {

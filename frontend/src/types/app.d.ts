@@ -110,6 +110,8 @@ export interface AppSettings {
   pluginSettings: Record<string, Record<string, any>>
   githubApiToken: string
   githubProxy: string
+  githubDownloadAcceleration: boolean
+  githubDownloadMirror: string
   multipleInstance: boolean
   addPluginToMenu: boolean
   addGroupToMenu: boolean
