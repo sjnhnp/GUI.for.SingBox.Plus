@@ -324,6 +324,7 @@ export default {
     notFound: '无核心',
     insertionPoint: '新规则将插入到这里',
     addInsertionPoint: '添加插入点',
+    missingInsertionPoint: '请先添加插入点',
   },
   router: {
     overview: '概览',
@@ -444,6 +445,9 @@ export default {
     empty: '订阅列表为空，请先{action}订阅。',
     enterLink: '输入订阅链接',
     proxyCount: '代理数量',
+    updateDirect: '直连更新',
+    updateSystemProxy: '系统代理更新',
+    updateKernelProxy: '核心代理更新',
     editProxies: '编辑节点',
     editSourceFile: '编辑节点(源文件)',
     copySub: '复制订阅链接',
@@ -523,6 +527,7 @@ export default {
     empty: '规则集列表为空，请先{action}或从{import}导入。',
     rulesetCount: '规则数量',
     editRuleset: '编辑规则',
+    addToProfile: '添加到配置',
     selectRuleType: '选择规则类型',
   },
   plugin: {
@@ -678,6 +683,7 @@ export default {
     autoSetSystemProxy: '自动配置系统代理',
     requestProxy: {
       name: '请求代理',
+      global: '跟随APP',
       none: '不使用代理',
       system: '使用系统代理',
       kernel: '使用核心代理',
@@ -688,6 +694,7 @@ export default {
     },
     proxyBypassList: '不使用代理的地址',
     proxyBypassListTips: '分号分隔',
+    darwinSystemProxyServices: '代理网络服务名称',
     autoStartKernel: '程序启动时开启核心',
     realMemoryUsage: '显示真实的核心内存占用',
     autoRestartKernel: {
