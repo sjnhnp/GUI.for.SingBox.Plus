@@ -296,7 +296,7 @@
     tcp_multi_path: boolean
     udp_fragment: boolean
   }
-  type OutboundType = 'direct' | 'block' | 'selector' | 'urltest'
+  type OutboundType = 'direct' | 'block' | 'selector' | 'urltest' | 'proxy'
   type TunStack = 'system' | 'gvisor' | 'mixed'
   type Network = 'tcp' | 'udp'
   type RuleSetType = 'inline' | 'local' | 'remote'
@@ -325,6 +325,7 @@
     | 'outbound'
     | 'inline'
     | 'InsertionPoint'
+    | 'logical'
   type Strategy = 'default' | 'prefer_ipv4' | 'prefer_ipv6' | 'ipv4_only' | 'ipv6_only'
   type DnsServer =
     | 'local'
@@ -451,6 +452,7 @@
     exclude: string
     icon: string
     hidden: boolean
+    config?: Recordable
   }
 
   interface Rule {
@@ -467,6 +469,8 @@
     // action = resolve
     strategy: Strategy
     server: string
+    mode?: string
+    rules?: any[]
   }
 
   interface Route {

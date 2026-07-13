@@ -59,7 +59,7 @@ const handleAdd = () => {
 
 defineExpose({ handleAdd })
 
-const handleDeleteGroup = (outbound: IOutbound) => {
+const handleDeleteGroup = (outbound: App.Outbound) => {
   const index = model.value.findIndex((v) => v.id === outbound.id)
   if (index === -1) return
   const id = model.value[index]!.id
@@ -106,7 +106,7 @@ const handleAddEnd = () => {
   }
 }
 
-const handleEditGroup = (outbound: IOutbound) => {
+const handleEditGroup = (outbound: App.Outbound) => {
   const index = model.value.findIndex((v) => v.id === outbound.id)
   updateGroupId = index
   fields.value = deepClone(outbound)
@@ -150,7 +150,7 @@ const hasLost = (outbound: App.Outbound) => {
   return false
 }
 
-const handleSortGroup = (outbound: IOutbound) => {
+const handleSortGroup = (outbound: App.Outbound) => {
   const index = model.value.findIndex((v) => v.id === outbound.id)
   updateGroupId = index
   fields.value = deepClone(outbound)

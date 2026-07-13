@@ -115,7 +115,7 @@ const generateInbounds = (inbounds: App.Inbound[]) => {
       }
     }
     if (inbound.type === Inbound.Tun) {
-      const tun = inbound.tun || inbound
+      const tun = (inbound.tun || inbound) as any
       return {
         type: inbound.type,
         tag: inbound.tag,
