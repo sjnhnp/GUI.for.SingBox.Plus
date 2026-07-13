@@ -12,17 +12,12 @@ import {
   usePluginsStore,
   useAppStore,
 } from '@/stores'
-import { debounce, deepClone, generateConfig, message, sampleID, alert } from '@/utils'
-
-import { useModal } from '@/components/Modal'
-
-import type { Menu } from '@/types/app'
+import { debounce, deepClone, generateConfig, message, sampleID, alert, modal } from '@/utils'
 
 import ProfileEditor from './components/ProfileEditor.vue'
 import ProfileForm from './components/ProfileForm.vue'
 
 const { t } = useI18n()
-const [Modal, modalApi] = useModal({})
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const subscribesStore = useSubscribesStore()
@@ -30,7 +25,7 @@ const appSettingsStore = useAppSettingsStore()
 const kernelApiStore = useKernelApiStore()
 const pluginsStore = usePluginsStore()
 
-const menuList: Menu[] = [
+const menuList: App.Menu[] = [
   'profile.step.name',
   'profile.step.general',
   'profile.step.inbounds',
@@ -48,7 +43,7 @@ const menuList: Menu[] = [
   }
 })
 
-const secondaryMenusList: Menu[] = [
+const secondaryMenusList: App.Menu[] = [
   {
     label: 'profiles.start',
     handler: async (id: string) => {
@@ -106,18 +101,18 @@ const secondaryMenusList: Menu[] = [
     label: 'profiles.editSourceFile',
     handler: async (id: string) => {
       const profile = profilesStore.getProfileById(id)!
-      modalApi.setProps({ title: profile.name, width: '90', height: '90' })
-      modalApi.setContent(ProfileEditor, { profile }).open()
+      const m = modal({ title: profile.name, width: '90', height: '90' })
+      m.setContent(ProfileEditor, { profile }).open()
     },
   },
 ]
 
-const generateMenus = (profile: IProfile) => {
-  const moreMenus: Menu[] = secondaryMenusList.map((v) => ({
+const generateMenus = (profile: App.Profile) => {
+  const moreMenus: App.Menu[] = secondaryMenusList.map((v) => ({
     ...v,
     handler: () => v.handler?.(profile.id),
   }))
-  const builtInMenus: Menu[] = [
+  const builtInMenus: App.Menu[] = [
     ...menuList.map((v) => ({ ...v, handler: () => v.handler?.(profile.id) })),
     {
       label: '',
@@ -158,7 +153,7 @@ const generateMenus = (profile: IProfile) => {
             }
           }),
         )
-      }, [] as Menu[]),
+      }, [] as App.Menu[]),
     )
   }
 
@@ -166,11 +161,11 @@ const generateMenus = (profile: IProfile) => {
 }
 
 const handleShowProfileForm = (id?: string, step = 0) => {
-  modalApi.setProps({ minWidth: '70' })
-  modalApi.setContent(ProfileForm, { id, step }).open()
+  const m = modal({ title: id ? 'common.edit' : 'common.add', minWidth: '70' })
+  m.setContent(ProfileForm, { id, step }).open()
 }
 
-const handleDeleteProfile = async (p: IProfile) => {
+const handleDeleteProfile = async (p: App.Profile) => {
   const { profile } = appSettingsStore.app.kernel
   if (profile === p.id && kernelApiStore.running) {
     message.warn('profiles.shouldStop')
@@ -185,7 +180,7 @@ const handleDeleteProfile = async (p: IProfile) => {
   }
 }
 
-const handleUseProfile = async (p: IProfile) => {
+const handleUseProfile = async (p: App.Profile) => {
   if (appSettingsStore.app.kernel.profile === p.id) return
 
   appSettingsStore.app.kernel.profile = p.id
@@ -312,6 +307,4 @@ const onSortUpdate = debounce(profilesStore.saveProfiles, 1000)
       </div>
     </Card>
   </div>
-
-  <Modal />
 </template>

@@ -5,16 +5,12 @@ import { useI18n, I18nT } from 'vue-i18n'
 import { DraggableOptions, ViewOptions } from '@/constant/app'
 import { View } from '@/enums/app'
 import { useAppSettingsStore, useScheduledTasksStore } from '@/stores'
-import { debounce, formatRelativeTime, formatDate, message, alert } from '@/utils'
-
-import { useModal } from '@/components/Modal'
-
-import type { Menu, ScheduledTask } from '@/types/app'
+import { debounce, formatRelativeTime, formatDate, message, alert, modal } from '@/utils'
 
 import ScheduledTaskForm from './components/ScheduledTaskForm.vue'
 import ScheduledTasksLogs from './components/ScheduledTasksLogs.vue'
 
-const menuList: Menu[] = [
+const menuList: App.Menu[] = [
   {
     label: 'scheduledtasks.run',
     handler: (id: string) => {
@@ -43,12 +39,11 @@ const menuList: Menu[] = [
 ]
 
 const { t } = useI18n()
-const [Modal, modalApi] = useModal({})
 const scheduledTasksStore = useScheduledTasksStore()
 const appSettingsStore = useAppSettingsStore()
 
 const handleShowTaskLogs = (id?: string) => {
-  modalApi.setProps({
+  const m = modal({
     title: 'scheduledtasks.logs',
     cancelText: 'common.close',
     maskClosable: true,
@@ -56,20 +51,20 @@ const handleShowTaskLogs = (id?: string) => {
     width: '90',
     height: '90',
   })
-  modalApi.setContent(ScheduledTasksLogs, { id }).open()
+  m.setContent(ScheduledTasksLogs, { id }).open()
 }
 
 const handleShowTaskForm = (id?: string) => {
-  modalApi.setProps({
+  const m = modal({
     title: id ? 'common.edit' : 'common.add',
     maxHeight: '90',
     minWidth: '70',
     maxWidth: '90',
   })
-  modalApi.setContent(ScheduledTaskForm, { id }).open()
+  m.setContent(ScheduledTaskForm, { id }).open()
 }
 
-const handleDeleteTask = async (s: ScheduledTask) => {
+const handleDeleteTask = async (s: App.ScheduledTask) => {
   try {
     await scheduledTasksStore.deleteScheduledTask(s.id)
   } catch (error: any) {
@@ -78,7 +73,7 @@ const handleDeleteTask = async (s: ScheduledTask) => {
   }
 }
 
-const handleDisableTask = async (s: ScheduledTask) => {
+const handleDisableTask = async (s: App.ScheduledTask) => {
   s.disabled = !s.disabled
   scheduledTasksStore.editScheduledTask(s.id, s)
 }
@@ -185,6 +180,4 @@ const onSortUpdate = debounce(scheduledTasksStore.saveScheduledTasks, 1000)
       </div>
     </Card>
   </div>
-
-  <Modal />
 </template>

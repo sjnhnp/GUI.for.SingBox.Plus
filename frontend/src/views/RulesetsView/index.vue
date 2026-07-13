@@ -8,13 +8,7 @@ import { BuiltInOutbound, EmptyRuleSet } from '@/constant/kernel'
 import { DefaultRouteRule, DefaultRouteRuleset } from '@/constant/profile'
 import { View } from '@/enums/app'
 import { RulesetFormat, RulesetType, RuleType } from '@/enums/kernel'
-import {
-  type RuleSet,
-  useRulesetsStore,
-  useAppSettingsStore,
-  useEnvStore,
-  useProfilesStore,
-} from '@/stores'
+import { useRulesetsStore, useAppSettingsStore, useEnvStore, useProfilesStore } from '@/stores'
 import {
   debounce,
   formatRelativeTime,
@@ -23,17 +17,14 @@ import {
   message,
   picker,
   deepClone,
+  modal,
 } from '@/utils'
-
-import { useModal } from '@/components/Modal'
-
-import type { Menu } from '@/types/app'
 
 import RulesetForm from './components/RulesetForm.vue'
 import RulesetHub from './components/RulesetHub.vue'
 import RulesetView from './components/RulesetView.vue'
 
-const sourceMenuList: Menu[] = [
+const sourceMenuList: App.Menu[] = [
   {
     label: 'rulesets.editRuleset',
     handler: (id: string) => handleEditRulesetList(id),
@@ -52,14 +43,13 @@ const sourceMenuList: Menu[] = [
 ]
 
 const { t } = useI18n()
-const [Modal, modalApi] = useModal({})
 const envStore = useEnvStore()
 const rulesetsStore = useRulesetsStore()
 const appSettingsStore = useAppSettingsStore()
 const profilesStore = useProfilesStore()
 
 const handleImportRuleset = async () => {
-  modalApi.setProps({
+  const m = modal({
     title: 'rulesets.hub',
     cancelText: 'common.close',
     height: '90',
@@ -67,18 +57,16 @@ const handleImportRuleset = async () => {
     submit: false,
     maskClosable: true,
   })
-  modalApi.setContent(RulesetHub)
-  modalApi.open()
+  m.setContent(RulesetHub).open()
 }
 
 const handleShowRulesetForm = async (id?: string, isUpdate = false) => {
-  modalApi.setProps({
+  const m = modal({
     title: isUpdate ? 'common.edit' : 'common.add',
     maxHeight: '90',
     minWidth: '70',
   })
-  modalApi.setContent(RulesetForm, { id, isUpdate })
-  modalApi.open()
+  m.setContent(RulesetForm, { id, isUpdate }).open()
 }
 
 const handleUpdateRulesets = async () => {
@@ -92,16 +80,15 @@ const handleUpdateRulesets = async () => {
 }
 
 const handleEditRulesetList = (id: string) => {
-  modalApi.setProps({
+  const m = modal({
     title: rulesetsStore.getRulesetById(id)?.name,
     height: '90',
     width: '90',
   })
-  modalApi.setContent(RulesetView, { id })
-  modalApi.open()
+  m.setContent(RulesetView, { id }).open()
 }
 
-const handleUpdateRuleset = async (r: RuleSet) => {
+const handleUpdateRuleset = async (r: App.RuleSet) => {
   try {
     await rulesetsStore.updateRuleset(r.id)
   } catch (error: any) {
@@ -110,7 +97,7 @@ const handleUpdateRuleset = async (r: RuleSet) => {
   }
 }
 
-const handleDeleteRuleset = async (r: RuleSet) => {
+const handleDeleteRuleset = async (r: App.RuleSet) => {
   try {
     await ignoredError(RemoveFile, r.path)
     await rulesetsStore.deleteRuleset(r.id)
@@ -120,7 +107,7 @@ const handleDeleteRuleset = async (r: RuleSet) => {
   }
 }
 
-const handleDisableRuleset = async (r: RuleSet) => {
+const handleDisableRuleset = async (r: App.RuleSet) => {
   r.disabled = !r.disabled
   rulesetsStore.editRuleset(r.id, r)
 }
@@ -211,8 +198,8 @@ const handleAddRulesetToProfile = async (id: string) => {
   }
 }
 
-const generateMenus = (r: RuleSet) => {
-  const addToProfileMenu: Menu = {
+const generateMenus = (r: App.RuleSet) => {
+  const addToProfileMenu: App.Menu = {
     label: 'rulesets.addToProfile',
     handler: (id: string) => handleAddRulesetToProfile(id),
   }
@@ -359,6 +346,4 @@ const onSortUpdate = debounce(rulesetsStore.saveRulesets, 1000)
       </template>
     </Card>
   </div>
-
-  <Modal />
 </template>

@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n'
 
 import logo from '@/assets/logo'
-import { RestartApp, BrowserOpenURL, ExitApp } from '@/bridge'
+import { BrowserOpenURL, ExitApp, RestartApp } from '@/bridge'
 import { OS } from '@/enums/app'
 import { useAppStore, useEnvStore } from '@/stores'
 import {
@@ -34,7 +34,9 @@ const handleRestartApp = async () => {
   }
 }
 
-appStore.checkForUpdates()
+if (Date.now() - appStore.lastCheckTime > 60_000) {
+  appStore.checkForUpdates()
+}
 </script>
 
 <template>

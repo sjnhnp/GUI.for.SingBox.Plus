@@ -13,18 +13,15 @@ import {
   ignoredError,
   formatDate,
   message,
+  modal,
 } from '@/utils'
-
-import { useModal } from '@/components/Modal'
-
-import type { Menu, Subscription } from '@/types/app'
 
 import ProxiesEditor from './components/ProxiesEditor.vue'
 import ProxiesView from './components/ProxiesView.vue'
 import SubscribeForm from './components/SubscribeForm.vue'
 import SubscribeScript from './components/SubscribeScript.vue'
 
-const menuList: Menu[] = [
+const menuList: App.Menu[] = [
   {
     label: 'subscribes.editProxies',
     handler: (id: string) => handleEditProxies(id),
@@ -46,8 +43,8 @@ const menuList: Menu[] = [
   {
     label: 'subscribes.script',
     handler: async (id: string) => {
-      modalApi.setProps({ title: 'common.edit', width: '90' })
-      modalApi.setContent(SubscribeScript, { id }).open()
+      const m = modal({ title: 'common.edit', width: '90' })
+      m.setContent(SubscribeScript, { id }).open()
     },
   },
   {
@@ -79,14 +76,13 @@ const menuList: Menu[] = [
 ]
 
 const { t } = useI18n()
-const [Modal, modalApi] = useModal({})
 const appStore = useAppStore()
 const subscribeStore = useSubscribesStore()
 const appSettingsStore = useAppSettingsStore()
 const pluginsStore = usePluginsStore()
 
-const generateMenus = (subscription: Subscription) => {
-  const builtInMenus: Menu[] = menuList.map((v) => ({
+const generateMenus = (subscription: App.Subscription) => {
+  const builtInMenus: App.Menu[] = menuList.map((v) => ({
     ...v,
     handler: () => v.handler?.(subscription.id),
     children: v.children?.map((child) => ({
@@ -126,7 +122,7 @@ const generateMenus = (subscription: Subscription) => {
               }
             }),
           )
-        }, [] as Menu[]),
+        }, [] as App.Menu[]),
       },
     )
   }
@@ -135,11 +131,11 @@ const generateMenus = (subscription: Subscription) => {
 }
 
 const handleShowSubForm = (id?: string) => {
-  modalApi.setProps({
+  const m = modal({
     title: id ? 'common.edit' : 'common.add',
     minWidth: '70',
   })
-  modalApi.setContent(SubscribeForm, { id }).open()
+  m.setContent(SubscribeForm, { id }).open()
 }
 
 const handleUpdateSubs = async () => {
@@ -155,12 +151,12 @@ const handleUpdateSubs = async () => {
 const handleEditProxies = (id: string, editor = false) => {
   const sub = subscribeStore.getSubscribeById(id)
   if (sub) {
-    modalApi.setProps({ title: sub.name, height: '90', width: '90' })
-    modalApi.setContent(editor ? ProxiesEditor : ProxiesView, { sub }).open()
+    const m = modal({ title: sub.name, height: '90', width: '90' })
+    m.setContent(editor ? ProxiesEditor : ProxiesView, { sub }).open()
   }
 }
 
-const handleUpdateSub = async (s: Subscription, options?: Partial<Subscription>) => {
+const handleUpdateSub = async (s: App.Subscription, options?: Partial<App.Subscription>) => {
   try {
     await subscribeStore.updateSubscribe(s.id, options)
   } catch (error: any) {
@@ -169,7 +165,7 @@ const handleUpdateSub = async (s: Subscription, options?: Partial<Subscription>)
   }
 }
 
-const handleDeleteSub = async (s: Subscription) => {
+const handleDeleteSub = async (s: App.Subscription) => {
   try {
     await ignoredError(RemoveFile, s.path)
     await subscribeStore.deleteSubscribe(s.id)
@@ -179,16 +175,16 @@ const handleDeleteSub = async (s: Subscription) => {
   }
 }
 
-const handleDisableSub = async (s: Subscription) => {
+const handleDisableSub = async (s: App.Subscription) => {
   s.disabled = !s.disabled
   subscribeStore.editSubscribe(s.id, s)
 }
 
 const noUpdateNeeded = computed(() => subscribeStore.subscribes.every((v) => v.disabled))
 
-const clacTrafficPercent = (s: Subscription) => ((s.upload + s.download) / s.total) * 100
+const clacTrafficPercent = (s: App.Subscription) => ((s.upload + s.download) / s.total) * 100
 
-const clacTrafficStatus = (s: Subscription) => {
+const clacTrafficStatus = (s: App.Subscription) => {
   const percent = clacTrafficPercent(s)
   if (percent > 90) return 'danger'
   if (percent > 80) return 'warning'
@@ -364,8 +360,6 @@ const onSortUpdate = debounce(subscribeStore.saveSubscribes, 1000)
       </template>
     </Card>
   </div>
-
-  <Modal />
 </template>
 
 <style lang="less" scoped>
