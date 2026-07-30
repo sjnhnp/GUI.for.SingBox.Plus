@@ -332,6 +332,7 @@ export default {
     insertionPoint: '新规则将插入到这里',
     addInsertionPoint: '添加插入点',
     missingInsertionPoint: '请先添加插入点',
+    startupFailed: '启动失败，请查看日志详情',
   },
   router: {
     overview: '概览',
@@ -824,6 +825,7 @@ export default {
     plugins: '插件',
   },
   commands: {
+    title: '命令',
     noMatching: '没有匹配到命令',
   },
 }
