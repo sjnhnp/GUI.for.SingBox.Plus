@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { h, resolveComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import logo from '@/assets/logo'
@@ -10,8 +9,6 @@ import {
   APP_TITLE,
   APP_VERSION,
   PROJECT_URL,
-  TG_GROUP,
-  TG_CHANNEL,
   message,
   RunWithOsaScript,
 } from '@/utils'
@@ -38,43 +35,6 @@ const handleRestartApp = async () => {
 if (Date.now() - appStore.lastCheckTime > 60_000) {
   appStore.checkForUpdates()
 }
-
-defineExpose({
-  modalSlots: {
-    toolbar: () => [
-      h(
-        resolveComponent('Button'),
-        {
-          type: 'link',
-          icon: 'github',
-          size: 'small',
-          onClick: () => BrowserOpenURL(PROJECT_URL),
-        },
-        () => 'GitHub',
-      ),
-      h(
-        resolveComponent('Button'),
-        {
-          type: 'link',
-          icon: 'telegram',
-          size: 'small',
-          onClick: () => BrowserOpenURL(TG_GROUP),
-        },
-        () => 'TG Group',
-      ),
-      h(
-        resolveComponent('Button'),
-        {
-          type: 'link',
-          icon: 'telegram',
-          size: 'small',
-          onClick: () => BrowserOpenURL(TG_CHANNEL),
-        },
-        () => 'TG Channel',
-      ),
-    ],
-  },
-})
 </script>
 
 <template>
