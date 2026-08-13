@@ -219,7 +219,15 @@ jobs:
   Build-Linux:
     needs: Build-Frontend
     if: github.event_name == 'push' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux'
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-26.04-arm
+    runs-on: ${{ matrix.runner }}
     env:
       APP_NAME: GFS Plus
     steps:
@@ -274,11 +282,11 @@ jobs:
             cd ../..
           }
 
-          build_and_pack amd64
+          build_and_pack ${{ matrix.arch }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-builds
+          name: linux-build-${{ matrix.arch }}
           path: build/bin/*.zip
 
   Release:
