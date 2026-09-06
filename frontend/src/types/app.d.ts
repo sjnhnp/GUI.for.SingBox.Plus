@@ -377,8 +377,7 @@
       path: string
       cache_id: string
       store_fakeip: boolean
-      store_rdrc: boolean
-      rdrc_timeout: string
+      store_dns: boolean
     }
   }
 
@@ -398,7 +397,7 @@
     path: string
     // remote
     url: string
-    download_detour: string
+    http_client: string
     update_interval: string
     // local or remote
     format: RuleSetFormat
@@ -480,6 +479,7 @@
     auto_detect_interface: boolean
     default_interface: string
     find_process: boolean
+    default_http_client: string
     default_domain_resolver: {
       server: string
       client_subnet: string
@@ -528,7 +528,6 @@
     rules: DnsRule[]
     disable_cache: boolean
     disable_expire: boolean
-    independent_cache: boolean
     client_subnet: string
     final: string
     strategy: Strategy

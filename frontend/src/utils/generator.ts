@@ -84,11 +84,32 @@ const generateExperimental = (experimental: App.Experimental, outbounds: App.Out
       ...experimental.clash_api,
       external_ui_download_detour: getOutbound(experimental.clash_api.external_ui_download_detour),
     },
-    cache_file: {
-      ...experimental.cache_file,
-      store_rdrc: undefined,
-    },
+    cache_file: experimental.cache_file,
   }
+}
+
+const generateHttpClients = (route: App.Route, outbounds: App.Outbound[]) => {
+  const getOutbound = (id: string) => outbounds.find((v) => v.id === id)?.tag
+  const defaultHttpClient = getOutbound(route.default_http_client)
+  const detours = Array.from(
+    new Set(
+      [
+        defaultHttpClient,
+        ...route.rule_set.map((ruleset) => getOutbound(ruleset.http_client)),
+      ].filter((tag): tag is string => !!tag),
+    ),
+  )
+
+  const httpClients: { tag: string; detour?: string }[] = detours.map((detour) => ({
+    tag: detour,
+    detour,
+  }))
+  if (!defaultHttpClient) {
+    let defaultTag = 'default'
+    while (detours.includes(defaultTag)) defaultTag = `_${defaultTag}`
+    httpClients.unshift({ tag: defaultTag })
+  }
+  return httpClients
 }
 
 const generateInbounds = (inbounds: App.Inbound[]) => {
@@ -306,7 +327,7 @@ const generateRoute = (
       } else if (ruleset.type === RulesetType.Remote) {
         extra.url = getAcceleratedUrl(ruleset.url)
         extra.format = ruleset.format
-        extra.download_detour = getOutbound(ruleset.download_detour)
+        extra.http_client = getOutbound(ruleset.http_client)
         if (ruleset.update_interval) {
           extra.update_interval = ruleset.update_interval
         }
@@ -320,6 +341,7 @@ const generateRoute = (
     auto_detect_interface: route.auto_detect_interface,
     find_process: route.find_process ? true : undefined,
     final: getOutbound(route.final),
+    default_http_client: getOutbound(route.default_http_client),
     default_domain_resolver: {
       server: getDnsServer(route.default_domain_resolver.server),
     },
@@ -440,7 +462,6 @@ const generateDns = (
     }),
     disable_cache: dns.disable_cache,
     disable_expire: dns.disable_expire,
-    independent_cache: dns.independent_cache,
     cache_capacity: (dns as any).cache_capacity,
     reverse_mapping: (dns as any).reverse_mapping,
     final: getDnsServer(dns.final),
@@ -503,6 +524,7 @@ export const generateConfig = async (
   let config: Recordable = {
     log: profile.log,
     experimental: generateExperimental(profile.experimental, profile.outbounds),
+    http_clients: generateHttpClients(profile.route, profile.outbounds),
     inbounds: generateInbounds(profile.inbounds),
     outbounds: await generateOutbounds(profile.outbounds),
     route: generateRoute(profile.route, profile.inbounds, profile.outbounds, profile.dns),

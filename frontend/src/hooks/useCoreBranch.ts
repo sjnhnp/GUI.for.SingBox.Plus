@@ -22,6 +22,7 @@ import { useAppSettingsStore, useEnvStore, useKernelApiStore } from '@/stores'
 import {
   getGitHubApiAuthorization,
   GrantTUNPermission,
+  PreserveCorePermissions,
   ignoredError,
   confirm,
   message,
@@ -140,6 +141,7 @@ export const useCoreBranch = (isAlpha = false) => {
 
       if (!CoreFilePath.endsWith('.exe')) {
         await ignoredError(Exec, 'chmod', ['+x', await AbsolutePath(CoreFilePath)])
+        await PreserveCorePermissions(CoreBakFilePath, CoreFilePath)
       }
 
       refreshLocalVersion()
