@@ -51,10 +51,16 @@ When merging, you **MUST** ensure the following custom logic is preserved or cor
    - For DNS rules, the generator **MUST** include an explicit `"action": "route"` field in the output JSON.
    - All "listable" match fields (like `domain_suffix`, `ip_cidr`, etc.) **MUST** be generated as **arrays**, even if they contain only a single value. This is required for strict parsing in modern sing-box kernels.
 
-3. **Mark Resolved**:
+3. **RuleSet Tag Array & Template Restoration (`frontend/src/utils/restorer.ts`)**:
+   - Ensure that `buildTagIdMapping` and `restoreRouteRuleset` support `tag` being an array (sing-box 1.14 / DustinWin syntax: `tag: ["ai", "proxy", ...]`).
+   - `buildTagIdMapping` **MUST** map each tag in the array to its own ID.
+   - `restoreRouteRuleset` **MUST** expand array tags into individual ruleset entries and replace `{tag}` in `url` / `path`.
+   - Ensure `lowerTag` calls in `restorer.ts` safely verify `typeof tag === 'string'` to prevent `t.tag?.toLowerCase is not a function` errors.
+
+4. **Mark Resolved**:
    - After editing, run `git add <file>`.
 
-4. **Finalize Merge**:
+5. **Finalize Merge**:
    - Run `git merge --continue`.
    - Enter a commit message if prompted (or standard default).
 
