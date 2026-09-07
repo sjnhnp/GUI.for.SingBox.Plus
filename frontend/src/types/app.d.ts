@@ -322,6 +322,14 @@
     | 'clash_mode'
     | 'rule_set'
     | 'ip_accept_any'
+    | 'ip_version'
+    | 'query_type'
+    | 'query_dnssec'
+    | 'query_client_subnet'
+    | 'response_rcode'
+    | 'response_answer'
+    | 'response_ns'
+    | 'response_extra'
     | 'outbound'
     | 'inline'
     | 'InsertionPoint'
@@ -340,7 +348,7 @@
     | 'fakeip'
     | 'tailscale'
   type RuleAction = 'route' | 'route-options' | 'reject' | 'hijack-dns' | 'sniff' | 'resolve'
-  type DnsRuleAction = 'route' | 'route-options' | 'reject' | 'predefined'
+  type DnsRuleAction = 'route' | 'route-options' | 'reject' | 'predefined' | 'evaluate' | 'respond'
   type RuleActionReject = 'default' | 'drop' | 'reply'
   type Sniffer =
     | 'http'
@@ -515,10 +523,12 @@
     payload: string
     action: DnsRuleAction
     invert: boolean
-    // route
+    match_response: string
+    // route/evaluate
     server: string
-    strategy: Strategy
-    // route/route-options
+    // evaluate
+    tag: string
+    // route/route-options/evaluate
     disable_cache: boolean
     client_subnet: string
   }
