@@ -52,21 +52,32 @@ const supportedRuleTypes = [
 
 const buildTagIdMapping = (prefix: string, arr?: Recordable[]): Recordable<string> => {
   const p: Recordable<string> = {}
-  
+
   // First pass: scan and map standard sing-box built-in tags and their common variants
-  const isBuiltInType = (type: string) => ['direct', 'block'].includes(type?.toLowerCase())
-  const getStandardId = (type: string) => type?.toLowerCase() === 'direct' ? 'outbound-direct' : 'outbound-block'
+  const isBuiltInType = (type: string) =>
+    typeof type === 'string' && ['direct', 'block'].includes(type.toLowerCase())
+  const getStandardId = (type: string) =>
+    typeof type === 'string' && type.toLowerCase() === 'direct'
+      ? 'outbound-direct'
+      : 'outbound-block'
 
   if (arr) {
-    arr.forEach((c, i) => {
-      const lowerTag = c.tag?.toLowerCase()
-      if (isBuiltInType(c.type)) {
-        p[c.tag] = getStandardId(c.type)
-      } else if (['direct', 'block'].includes(lowerTag)) {
-        p[c.tag] = getStandardId(lowerTag)
-      } else {
-        p[c.tag] = prefix + i
-      }
+    let index = 0
+    arr.forEach((c) => {
+      const tags = Array.isArray(c.tag) ? c.tag : [c.tag]
+      tags.forEach((tag) => {
+        if (tag === undefined || tag === null) return
+        const strTag = String(tag)
+        const lowerTag = strTag.toLowerCase()
+        if (isBuiltInType(c.type)) {
+          p[strTag] = getStandardId(c.type)
+        } else if (['direct', 'block'].includes(lowerTag)) {
+          p[strTag] = getStandardId(lowerTag)
+        } else {
+          p[strTag] = prefix + index
+        }
+        index++
+      })
     })
   }
 
@@ -280,7 +291,7 @@ const restoreOutbounds = (
     let newOutbounds: App.Proxy[] = []
 
     raw.outbounds?.forEach((tag: string) => {
-      const lowerTag = tag.toLowerCase()
+      const lowerTag = typeof tag === 'string' ? tag.toLowerCase() : ''
       const isDirect = lowerTag === 'direct'
       const isBlock = lowerTag === 'block'
       if (isDirect || isBlock) {
@@ -409,42 +420,49 @@ const restoreRouteRuleset = (
 ): App.ProfileRuleSet[] => {
   const rulesetsStore = useRulesetsStore()
   return rulesets.flatMap((raw) => {
-    const ruleset = Defaults.DefaultRouteRuleset()
-    ruleset.id = RouteRuleSetIds[raw.tag]
-    ruleset.type = raw.type
-    ruleset.tag = raw.tag
+    const tags = Array.isArray(raw.tag) ? raw.tag : [raw.tag]
+    return tags.map((tag: string) => {
+      const strTag = String(tag)
+      const ruleset = Defaults.DefaultRouteRuleset()
+      ruleset.id = RouteRuleSetIds[strTag] || sampleID()
+      ruleset.type = raw.type
+      ruleset.tag = strTag
 
-    if (raw.type === RulesetType.Inline) {
-      if ('rules' in raw) {
-        ruleset.rules = JSON.stringify(raw.rules, null, 2)
-      }
-    } else if (raw.type === RulesetType.Local) {
-      if ('path' in raw) {
-        const r = rulesetsStore.rulesets.find((v) => v.path === raw.path.replace('../', 'data/'))
-        if (r) {
-          ruleset.path = r.id
-        } else {
-          ruleset.path = raw.path
+      if (raw.type === RulesetType.Inline) {
+        if ('rules' in raw) {
+          ruleset.rules = JSON.stringify(raw.rules, null, 2)
+        }
+      } else if (raw.type === RulesetType.Local) {
+        if ('path' in raw) {
+          const resolvedPath =
+            typeof raw.path === 'string' ? raw.path.replace(/{tag}/g, strTag) : raw.path
+          const r = rulesetsStore.rulesets.find((v) => v.path === resolvedPath.replace('../', 'data/'))
+          if (r) {
+            ruleset.path = r.id
+          } else {
+            ruleset.path = resolvedPath
+          }
+        }
+        if ('format' in raw) {
+          ruleset.format = raw.format
+        }
+      } else if (raw.type === RulesetType.Remote) {
+        if ('format' in raw) {
+          ruleset.format = raw.format
+        }
+        if ('url' in raw) {
+          ruleset.url =
+            typeof raw.url === 'string' ? raw.url.replace(/{tag}/g, strTag) : raw.url
+        }
+        if (typeof raw.http_client === 'string') {
+          ruleset.http_client = HttpClientOutboundIds[raw.http_client] || ''
+        }
+        if ('update_interval' in raw) {
+          ruleset.update_interval = raw.update_interval
         }
       }
-      if ('format' in raw) {
-        ruleset.format = raw.format
-      }
-    } else if (raw.type === RulesetType.Remote) {
-      if ('format' in raw) {
-        ruleset.format = raw.format
-      }
-      if ('url' in raw) {
-        ruleset.url = raw.url
-      }
-      if (typeof raw.http_client === 'string') {
-        ruleset.http_client = HttpClientOutboundIds[raw.http_client] || ''
-      }
-      if ('update_interval' in raw) {
-        ruleset.update_interval = raw.update_interval
-      }
-    }
-    return ruleset
+      return ruleset
+    })
   })
 }
 
@@ -506,7 +524,7 @@ const restoreRouteRules = (
       let id = OutboundsIds[tag]
       if (!id) {
         // Fallback for missing built-in mappings
-        const lowerTag = tag?.toLowerCase()
+        const lowerTag = typeof tag === 'string' ? tag.toLowerCase() : ''
         if (lowerTag === 'direct') id = 'outbound-direct'
         else if (lowerTag === 'block') id = 'outbound-block'
       }
