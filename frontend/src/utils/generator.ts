@@ -481,6 +481,7 @@ const generateDns = (
     disable_expire: dns.disable_expire,
     cache_capacity: (dns as any).cache_capacity,
     reverse_mapping: (dns as any).reverse_mapping,
+    optimistic: dns.optimistic,
     final: getDnsServer(dns.final),
     ...extra,
   }

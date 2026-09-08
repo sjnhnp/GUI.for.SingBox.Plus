@@ -538,6 +538,10 @@
     rules: DnsRule[]
     disable_cache: boolean
     disable_expire: boolean
+    optimistic: {
+      enabled: boolean
+      timeout: string
+    }
     client_subnet: string
     final: string
     strategy: Strategy
