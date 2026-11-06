@@ -55,6 +55,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     primaryColor: '#000',
     secondaryColor: '#545454',
     fontFamily: DefaultFontFamily,
+    systemTitleBar: false,
     profilesView: View.Grid,
     subscribesView: View.Grid,
     rulesetsView: View.Grid,
@@ -117,6 +118,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     debugUsePointer: false,
     pages: ['Overview', 'Profiles', 'Subscriptions', 'Plugins'],
   })
+
+  const systemTitleBarOnStartup = ref(false)
 
   const saveAppSettings = debounce((config: string) => {
     WriteFile(UserFilePath, config)
@@ -191,7 +194,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       settings.debugModalSideBySide = false
     }
 
+    settings.systemTitleBar ??= false
+
     app.value = settings
+    systemTitleBarOnStartup.value = settings.systemTitleBar
     latestUserSettings = stringify(app.value)
   }
 
@@ -283,9 +289,12 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   })
   const setAppTheme = (theme: Extract<App.Theme, 'light' | 'dark'>) => {
     if (document.startViewTransition) {
-      document.startViewTransition(() => {
+      const transition = document.startViewTransition(() => {
         document.body.setAttribute('theme-mode', theme)
       })
+      transition.ready.catch(() => {})
+      transition.updateCallbackDone.catch(() => {})
+      transition.finished.catch(() => {})
     } else {
       document.body.setAttribute('theme-mode', theme)
     }
@@ -392,5 +401,5 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     setSystemDNS,
   )
 
-  return { setupAppSettings, app, themeMode }
+  return { setupAppSettings, app, themeMode, systemTitleBarOnStartup }
 })
